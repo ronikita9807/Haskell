@@ -3,6 +3,11 @@ module Main(main) where
 import Graphics.Gloss
 import Graphics.Gloss.Data.ViewPort
 import Graphics.Gloss.Interface.Pure.Game
+import System.Random
+import System.IO.Unsafe
+
+import Graphics.Gloss.Interface.IO.Game
+import System.Exit
 
 width, height :: Int
 width = 600
@@ -24,24 +29,44 @@ data PongGame = Game
   , platformLoc :: (Float, Float) -- ^ Platform (x, y) location.
   , gameScore :: Score
   , gameOverText :: String
+  , playerName :: String
+  , proFile :: String
   } deriving Show
 
 -- | The starting state for the game of Pong.
-initialState :: PongGame
-initialState = Game
+initialState :: String -> String -> PongGame
+initialState prof name = Game
   { ballLoc = (0, (-100))
   , ballVel = (0, 0)
   , platformLoc = (0, (-250))
   , ballVelBuf = (0, 0)
   , gameScore = 0
   , gameOverText = ""
+  , playerName = name
+  , proFile = prof
   }
 
 -- | Convert a game state into a picture.
 render :: PongGame  -- ^ The game state to render.
-       -> Picture   -- ^ A picture of this game state.
-render game = pictures [ ball, walls, platform, gameName, authors, drawScore(gameScore game), drawGameOverText(game)]
+       -> IO Picture   -- ^ A picture of this game state.
+render game = do t1 <- readFile ("p1.txt")
+                 t2 <- readFile ("p2.txt")
+                 t3 <- readFile ("p3.txt")
+                 t4 <- readFile ("p4.txt")
+                 return (pictures [ ball, walls, platform, gameName, authors, drawScore(gameScore game), drawGameOverText(game), helloStr(playerName game), records 180.0 t1, records 150.0 t2, records 120.0 t3, records 90.0 t4, board 180.0, board 150.0, board 120.0, board 90.0])
   where
+    -- Hello string!
+    helloStr :: String -> Picture
+    helloStr name = translate (-650) (220) $ scale 0.2 0.2 $ color yellow $ text ("Welcome " ++ name ++ " !")
+
+    -- Records Table.
+    records :: Float -> String -> Picture
+    records y str = translate (-650) (y) $ scale 0.2 0.2 $ color green $ text str
+
+    -- Right Records Table Board.
+    board :: Float -> Picture
+    board y = translate (-370) (y) $ scale 0.2 0.2 $ color green $ text "|"
+
     -- The gameName.    
     gameName = translate (-650) (280) $ scale 0.5 0.5 $ color white $ text "Arkanoid!"
 
@@ -49,7 +74,7 @@ render game = pictures [ ball, walls, platform, gameName, authors, drawScore(gam
     authors = translate (400) (-380) $ scale 0.1 0.1 $ color white $ text "Created by KorotkovBS and RozkovNO (c)"
 
     --  The pong ball.
-    ball = uncurry translate (ballLoc game) $ color ballColor $ circleSolid 8
+    ball = uncurry translate (ballLoc game) $ color randColor $ circleSolid 8
     ballColor = dark red
 
     --  The wallOne.
@@ -180,28 +205,38 @@ checkGameOver game = if snd (ballLoc game) - 8 < snd (platformLoc game) - 5 then
 
 
 -- | Update the game by moving the ball and bouncing off walls.
-update :: Float -> PongGame -> PongGame
-update seconds = checkGameOver . paddleBounce . wallBounce . moveBall seconds
+update :: Float -> PongGame -> IO PongGame
+update seconds = return . checkGameOver . paddleBounce . wallBounce . moveBall seconds
 
 -- | Respond to key events.
-handleKeys :: Event -> PongGame -> PongGame
+handleKeys :: Event -> PongGame -> IO PongGame
 
 -- For an 's' keypress, reset the ball to the center.
-handleKeys (EventKey (Char 's') _ _ _) game =
-  game { ballLoc = (0, -100), ballVel = (250, -250), gameScore = 0, gameOverText = "" }
-
--- For an 'r' keypress, to pause the game.
-handleKeys (EventKey (Char 'r') _ _ _) game = game { ballVelBuf = ballVel game }
+handleKeys (EventKey (Char 's') _ _ _) game = return game { ballLoc = (0, -100), ballVel = (250, -250), gameScore = 0, gameOverText = "" }
 
 -- For an 'p' keypress, to pause the game.
-handleKeys (EventKey (Char 'p') _ _ _) game = let v = ballVel game 
-                                                in game { ballVelBuf = v, ballVel = (0, 0) }
+handleKeys (EventKey (Char 'p') _ _ _) game =
+  let v = ballVel game
+  in if v /= (0,0)
+     then return game { ballVelBuf = v, ballVel = (0, 0) }
+     else return game
 
 -- For an 'g' keypress, to unpause the game.
-handleKeys (EventKey (Char 'g') _ _ _) game = game { ballVel = ballVelBuf game }
+handleKeys (EventKey (Char 'g') _ _ _) game = return game { ballVel = ballVelBuf game }
+
+-- For an 'r' keypress, to save your score in the records table.
+handleKeys (EventKey (Char 'r') Down _ _) game = do writeFile ("p"++ proFile game ++ ".txt") (" | " ++ (playerName game) ++ "  " ++ show(gameScore game))
+                                                    return game
+
+-- For an 'c' keypress, to clear the records board.
+handleKeys (EventKey (Char 'c') Down _ _) game = do writeFile ("p1.txt") " "
+                                                    writeFile ("p2.txt") " "
+                                                    writeFile ("p3.txt") " "
+                                                    writeFile ("p4.txt") " "
+                                                    return game
 
 -- For an 'a' keypress
-handleKeys (EventKey (Char 'a') _ _ _) game = game { platformLoc = (x', y) }
+handleKeys (EventKey (Char 'a') _ _ _) game = return game { platformLoc = (x', y) }
   where 
     -- Old locations and velocities.
     (x, y) = platformLoc game
@@ -212,7 +247,7 @@ handleKeys (EventKey (Char 'a') _ _ _) game = game { platformLoc = (x', y) }
          else x
 
 -- For an 'd' keypress
-handleKeys (EventKey (Char 'd') _ _ _) game = game { platformLoc = (x', y) }
+handleKeys (EventKey (Char 'd') _ _ _) game = return game { platformLoc = (x', y) }
   where 
     -- Old locations and velocities.
     (x, y) = platformLoc game
@@ -222,8 +257,23 @@ handleKeys (EventKey (Char 'd') _ _ _) game = game { platformLoc = (x', y) }
          then x + 30
          else x
 
+-- For an 'Esc' keypress, to exit the game.
+handleKeys (EventKey (SpecialKey KeyEsc) _ _ _) game = exitSuccess
+
 -- Do nothing for all other events.
-handleKeys _ game = game
+handleKeys _ game = return game
+
+-- Random Color
+randColor :: Color
+randColor | (mod ((unsafePerformIO (getStdRandom (randomR (0, 100)))) :: Int) 4) == 0 = red
+          | (mod ((unsafePerformIO (getStdRandom (randomR (0, 100)))) :: Int) 4) == 1 = green
+          | (mod ((unsafePerformIO (getStdRandom (randomR (0, 100)))) :: Int) 4) == 2 = blue
+          | otherwise = yellow
 
 main :: IO ()
-main = play window background fps initialState render handleKeys update
+main = do putStrLn "Hello, what's your name?"
+          name <- getLine
+          putStrLn ("Hey " ++ name ++ "!")
+          putStrLn "Choose you`r profile (1,2,3,4)"
+          prof <- getLine
+          playIO window background fps (initialState prof name) render handleKeys update --print $ show(randColor)
