@@ -31,6 +31,7 @@ data PongGame = Game
   , gameOverText :: String
   , playerName :: String
   , proFile :: String
+  , gameState :: Integer
   } deriving Show
 
 -- | The starting state for the game of Pong.
@@ -44,6 +45,7 @@ initialState prof name = Game
   , gameOverText = ""
   , playerName = name
   , proFile = prof
+  , gameState = 0
   }
 
 -- | Convert a game state into a picture.
@@ -53,11 +55,19 @@ render game = do t1 <- readFile ("p1.txt")
                  t2 <- readFile ("p2.txt")
                  t3 <- readFile ("p3.txt")
                  t4 <- readFile ("p4.txt")
-                 return (pictures [ ball, walls, platform, gameName, authors, drawScore(gameScore game), drawGameOverText(game), helloStr(playerName game), records 180.0 t1, records 150.0 t2, records 120.0 t3, records 90.0 t4, board 180.0, board 150.0, board 120.0, board 90.0])
+                 if (gameState game == 0) then return (pictures [ ball, walls, platform, gameName, authors, drawScore(gameScore game), drawGameOverText(game), helloStr(playerName game), records 180.0 t1, records 150.0 t2, records 120.0 t3, records 90.0 t4, board 180.0, board 150.0, board 120.0, board 90.0]) else return (pictures [ myText (-500) 250 0.5 0.5 white "Bonuses:", myText (-500) (-100) 0.5 0.5 white "Control Keys:", myText (-500) (-140) 0.15 0.15 white "-- Press 's' to reset the game.", myText (-500) (-170) 0.15 0.15 white "-- Press 'p' to pause the game.", myText (-500) (-200) 0.15 0.15 white "-- Press 'g' to resume the game.", myText (-500) (-230) 0.15 0.15 white "-- Press 'r' to save your score in the records table.", myText (-500) (-260) 0.15 0.15 white "-- Press 'c' to clear the records table.", myText (250) (-350) 0.15 0.15 white "-- To continue the game press ' y '.", bonusHelp (-440) (215) red, bonusHelp (-440) (170) green, bonusHelp (-440) (125) blue, bonusHelp (-440) (80) yellow, myText (-400) (210) 0.15 0.15 white "-- Increases platform size", myText (-400) (165) 0.15 0.15 white "-- Reduces platform size.", myText (-400) (120) 0.15 0.15 white "-- Increases ball speed.", myText (-400) (75) 0.15 0.15 white "-- Reduses ball speed." ])
   where
     -- Hello string!
     helloStr :: String -> Picture
     helloStr name = translate (-650) (220) $ scale 0.2 0.2 $ color yellow $ text ("Welcome " ++ name ++ " !")
+
+    -- Text Function.
+    myText :: Float -> Float -> Float -> Float -> Color -> String -> Picture
+    myText x y sx sy col txt = translate (x) (y) $ scale sx sy $ color col $ text txt
+
+    -- Bonus texture.
+    bonusHelp :: Float -> Float -> Color -> Picture
+    bonusHelp x y col = translate (x) (y) $ color col $ circleSolid 15
 
     -- Records Table.
     records :: Float -> String -> Picture
@@ -211,7 +221,7 @@ update seconds = return . checkGameOver . paddleBounce . wallBounce . moveBall s
 -- | Respond to key events.
 handleKeys :: Event -> PongGame -> IO PongGame
 
--- For an 's' keypress, reset the ball to the center.
+-- For an 's' keypress, to reset the game.
 handleKeys (EventKey (Char 's') _ _ _) game = return game { ballLoc = (0, -100), ballVel = (250, -250), gameScore = 0, gameOverText = "" }
 
 -- For an 'p' keypress, to pause the game.
@@ -223,6 +233,12 @@ handleKeys (EventKey (Char 'p') _ _ _) game =
 
 -- For an 'g' keypress, to unpause the game.
 handleKeys (EventKey (Char 'g') _ _ _) game = return game { ballVel = ballVelBuf game }
+
+-- For an 't' keypress, to see game rules.
+handleKeys (EventKey (Char 't') _ _ _) game = return game { gameState = 1 }
+
+-- For an 'y' keypress, to see game rules.
+handleKeys (EventKey (Char 'y') _ _ _) game = return game { gameState = 0 }
 
 -- For an 'r' keypress, to save your score in the records table.
 handleKeys (EventKey (Char 'r') Down _ _) game = do writeFile ("p"++ proFile game ++ ".txt") (" | " ++ (playerName game) ++ "  " ++ show(gameScore game))
