@@ -8,4 +8,5 @@ main = do putStrLn "Hello, what's your name?"
           putStrLn ("Hey " ++ name ++ "!")
           putStrLn "Choose you`r profile (1,2,3,4)"
           prof <- getLine
-          runMyProj name prof
+          images <- loadImages
+          runMyProj name prof images

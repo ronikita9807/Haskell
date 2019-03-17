@@ -1,10 +1,14 @@
-module MyProj(runMyProj) where
+module MyProj where
 
 import Graphics.Gloss
 import Graphics.Gloss.Data.ViewPort
 import Graphics.Gloss.Interface.Pure.Game
 import System.Random
 import System.IO.Unsafe
+
+import Graphics.Gloss.Data.Vector
+import Graphics.Gloss.Interface.Pure.Simulate
+import Graphics.Gloss.Juicy
 
 import Graphics.Gloss.Interface.IO.Game
 import System.Exit
@@ -48,14 +52,50 @@ initialState prof name = Game
   , gameState = 0
   }
 
+-- | Изображения объектов.
+data Images = Images
+  { imageKarina  :: Picture   -- ^ Изображение Карины.
+  , imageArkanoid   :: Picture
+  , imageSmile   :: Picture
+  , imageCat1 :: Picture
+  , imageCat2 :: Picture
+  , imageCat3 :: Picture
+  }
+
+-- | Загрузить изображения из файлов.
+loadImages :: IO Images
+loadImages = do
+  Just karina   <- loadJuicyPNG "images/karina.png"
+  Just arkanoid   <- loadJuicyPNG "images/arkanoid.png"
+  Just smile   <- loadJuicyPNG "images/smile.png"
+  Just cat1   <- loadJuicyPNG "images/cat1.png"
+  Just cat2   <- loadJuicyPNG "images/cat2.png"
+  Just cat3   <- loadJuicyPNG "images/cat3.png"
+  return Images
+    { imageKarina   = scale 1.0 1.0 karina
+    , imageArkanoid    = scale 1.0 1.0 arkanoid
+    , imageSmile    = scale 0.2 0.2 smile
+    , imageCat1 = scale 1.0 1.0 cat1
+    , imageCat2 = scale 1.0 1.0 cat2
+    , imageCat3 = scale 1.0 1.0 cat3
+    }
+
+-- | Отобразить картинку.
+drawPicture :: Picture -> Float -> Float -> Float -> Picture
+drawPicture image x y r = translate (x) (y) (scale r r image)
+
+-- | Отобразить картинку.
+drawBall :: Picture -> PongGame -> Picture
+drawBall image game = uncurry translate (ballLoc game) (scale 0.2 0.2 image)
+
 -- | Convert a game state into a picture.
-render :: PongGame  -- ^ The game state to render.
+render :: Images -> PongGame  -- ^ The game state to render.
        -> IO Picture   -- ^ A picture of this game state.
-render game = do t1 <- readFile ("p1.txt")
-                 t2 <- readFile ("p2.txt")
-                 t3 <- readFile ("p3.txt")
-                 t4 <- readFile ("p4.txt")
-                 if (gameState game == 0) then return (pictures [ ball, walls, platform, gameName, authors, drawScore(gameScore game), drawGameOverText(game), helloStr(playerName game), records 180.0 t1, records 150.0 t2, records 120.0 t3, records 90.0 t4, board 180.0, board 150.0, board 120.0, board 90.0]) else return (pictures [ myText (-500) 250 0.5 0.5 white "Bonuses:", myText (-500) (-100) 0.5 0.5 white "Control Keys:", myText (-500) (-140) 0.15 0.15 white "-- Press 's' to reset the game.", myText (-500) (-170) 0.15 0.15 white "-- Press 'p' to pause the game.", myText (-500) (-200) 0.15 0.15 white "-- Press 'g' to resume the game.", myText (-500) (-230) 0.15 0.15 white "-- Press 'r' to save your score in the records table.", myText (-500) (-260) 0.15 0.15 white "-- Press 'c' to clear the records table.", myText (250) (-350) 0.15 0.15 white "-- To continue the game press ' y '.", bonusHelp (-440) (215) red, bonusHelp (-440) (170) green, bonusHelp (-440) (125) blue, bonusHelp (-440) (80) yellow, myText (-400) (210) 0.15 0.15 white "-- Increases platform size", myText (-400) (165) 0.15 0.15 white "-- Reduces platform size.", myText (-400) (120) 0.15 0.15 white "-- Increases ball speed.", myText (-400) (75) 0.15 0.15 white "-- Reduses ball speed." ])
+render images game = do  t1 <- readFile ("p1.txt")
+                         t2 <- readFile ("p2.txt")
+                         t3 <- readFile ("p3.txt")
+                         t4 <- readFile ("p4.txt")
+                         if (gameState game == 0) then return (pictures [ ball, walls, platform, gameName, authors, drawScore(gameScore game), drawGameOverText(game), helloStr(playerName game), records 180.0 t1, records 150.0 t2, records 120.0 t3, records 90.0 t4, board 180.0, board 150.0, board 120.0, board 90.0, translate 500 200 $ color white $ rectangleSolid 250 250, drawPicture  (imageCat1  images) (505) (200) 1.0, drawPicture  (imageCat3  images) (-535) (-235) 0.5 ]) else return (pictures [ myText (-500) 250 0.5 0.5 white "Bonuses:", myText (-500) (-100) 0.5 0.5 white "Control Keys:", myText (-500) (-140) 0.15 0.15 white "-- Press 's' to reset the game.", myText (-500) (-170) 0.15 0.15 white "-- Press 'p' to pause the game.", myText (-500) (-200) 0.15 0.15 white "-- Press 'g' to resume the game.", myText (-500) (-230) 0.15 0.15 white "-- Press 'r' to save your score in the records table.", myText (-500) (-260) 0.15 0.15 white "-- Press 'c' to clear the records table.", myText (250) (-350) 0.15 0.15 white "-- To continue the game press ' y '.", bonusHelp (-440) (215) red, bonusHelp (-440) (170) green, bonusHelp (-440) (125) blue, bonusHelp (-440) (80) yellow, myText (-400) (210) 0.15 0.15 white "-- Increases platform size", myText (-400) (165) 0.15 0.15 white "-- Reduces platform size.", myText (-400) (120) 0.15 0.15 white "-- Increases ball speed.", myText (-400) (75) 0.15 0.15 white "-- Reduses ball speed.", drawPicture  (imageKarina  images) 550 (-200) 0.7, drawPicture  (imageArkanoid  images) 300 (200) 0.9, drawPicture  (imageCat2  images) 30 (-100) 0.5])
   where
     -- Hello string!
     helloStr :: String -> Picture
@@ -84,8 +124,8 @@ render game = do t1 <- readFile ("p1.txt")
     authors = translate (400) (-380) $ scale 0.1 0.1 $ color white $ text "Created by KorotkovBS and RozkovNO (c)"
 
     --  The pong ball.
-    ball = uncurry translate (ballLoc game) $ color randColor $ circleSolid 8
-    ballColor = dark red
+    ball = drawBall  (imageSmile  images) game --uncurry translate (ballLoc game) $ color randColor $ circleSolid 8
+    --ballColor = dark red
 
     --  The wallOne.
     wallOne :: Color -> Float -> Float -> Picture
@@ -113,7 +153,7 @@ drawScore :: Score -> Picture
 drawScore score = translate (-w) (-h) (scale 30 30 (pictures
   [ color white (polygon [ (0, 0), (0, -2), (6, -2), (6, 0) ])            -- белая рамка
   , color black (polygon [ (0.1, -0.1), (0.1, -1.9), (5.9, -1.9), (5.9, -0.1) ])    -- чёрные внутренности
-  , translate 2.75 (-1.5) (scale 0.01 0.01 (color red (text (show score))))  -- красный счёт
+  , translate 2.25 (-1.5) (scale 0.01 0.01 (color red (text (show score))))  -- красный счёт
   ]))
   where
     w = fromIntegral 1300 / 2
@@ -286,5 +326,5 @@ randColor | (mod ((unsafePerformIO (getStdRandom (randomR (0, 100)))) :: Int) 4)
           | (mod ((unsafePerformIO (getStdRandom (randomR (0, 100)))) :: Int) 4) == 2 = blue
           | otherwise = yellow
 
-runMyProj :: String -> String -> IO ()
-runMyProj name prof = playIO window background fps (initialState prof name) render handleKeys update --print $ show(randColor)
+runMyProj :: String -> String -> Images -> IO ()
+runMyProj name prof images = playIO window background fps (initialState prof name) (render images) handleKeys update --print $ show(randColor)

@@ -10,6 +10,9 @@ description:         Please see the README file.
 
 dependencies:
 - base >= 4.7 && < 5
+- gloss
+- random
+- gloss-juicy
 
 library:
   source-dirs: src
