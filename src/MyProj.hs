@@ -12,6 +12,8 @@ import Graphics.Gloss.Juicy
 
 import Graphics.Gloss.Interface.IO.Game
 import System.Exit
+--import Text.Read hiding (Char)
+import Text.Read (readMaybe)
 
 width, height :: Int
 width = 600
@@ -31,6 +33,7 @@ data PongGame = Game
   , ballVelBuf :: (Float, Float) -- ^ helping buffer.
   , ballVel :: (Float, Float)  -- ^ Pong ball (x, y) velocity. 
   , platformLoc :: (Float, Float) -- ^ Platform (x, y) location.
+  , platformsLoc :: [(Float,Float)]
   , gameScore :: Score
   , gameOverText :: String
   , playerName :: String
@@ -44,9 +47,10 @@ initialState prof name = Game
   { ballLoc = (0, (-100))
   , ballVel = (0, 0)
   , platformLoc = (0, (-250))
+  , platformsLoc = [(x,y)| x<-[-210, -100..220], y<-[90,150..290]]
   , ballVelBuf = (0, 0)
   , gameScore = 0
-  , gameOverText = ""
+  , gameOverText = " "
   , playerName = name
   , proFile = prof
   , gameState = 0
@@ -60,6 +64,8 @@ data Images = Images
   , imageCat1 :: Picture
   , imageCat2 :: Picture
   , imageCat3 :: Picture
+  , imageBonusDoge :: Picture
+  , imageDoge :: Picture
   }
 
 -- | Загрузить изображения из файлов.
@@ -71,6 +77,8 @@ loadImages = do
   Just cat1   <- loadJuicyPNG "images/cat1.png"
   Just cat2   <- loadJuicyPNG "images/cat2.png"
   Just cat3   <- loadJuicyPNG "images/cat3.png"
+  Just bonusDoge <- loadJuicyPNG "images/doge.png"
+  Just doge <- loadJuicyPNG "images/dogebread.png"
   return Images
     { imageKarina   = scale 1.0 1.0 karina
     , imageArkanoid    = scale 1.0 1.0 arkanoid
@@ -78,7 +86,10 @@ loadImages = do
     , imageCat1 = scale 1.0 1.0 cat1
     , imageCat2 = scale 1.0 1.0 cat2
     , imageCat3 = scale 1.0 1.0 cat3
+    , imageBonusDoge = scale 1.0 1.0 bonusDoge
+    , imageDoge = scale 1.0 1.0 doge
     }
+
 
 -- | Отобразить картинку.
 drawPicture :: Picture -> Float -> Float -> Float -> Picture
@@ -95,7 +106,8 @@ render images game = do  t1 <- readFile ("p1.txt")
                          t2 <- readFile ("p2.txt")
                          t3 <- readFile ("p3.txt")
                          t4 <- readFile ("p4.txt")
-                         if (gameState game == 0) then return (pictures [ ball, walls, platform, gameName, authors, drawScore(gameScore game), drawGameOverText(game), helloStr(playerName game), records 180.0 t1, records 150.0 t2, records 120.0 t3, records 90.0 t4, board 180.0, board 150.0, board 120.0, board 90.0, translate 500 200 $ color white $ rectangleSolid 250 250, drawPicture  (imageCat1  images) (505) (200) 1.0, drawPicture  (imageCat3  images) (-535) (-235) 0.5 ]) else return (pictures [ myText (-500) 250 0.5 0.5 white "Bonuses:", myText (-500) (-100) 0.5 0.5 white "Control Keys:", myText (-500) (-140) 0.15 0.15 white "-- Press 's' to reset the game.", myText (-500) (-170) 0.15 0.15 white "-- Press 'p' to pause the game.", myText (-500) (-200) 0.15 0.15 white "-- Press 'g' to resume the game.", myText (-500) (-230) 0.15 0.15 white "-- Press 'r' to save your score in the records table.", myText (-500) (-260) 0.15 0.15 white "-- Press 'c' to clear the records table.", myText (250) (-350) 0.15 0.15 white "-- To continue the game press ' y '.", bonusHelp (-440) (215) red, bonusHelp (-440) (170) green, bonusHelp (-440) (125) blue, bonusHelp (-440) (80) yellow, myText (-400) (210) 0.15 0.15 white "-- Increases platform size", myText (-400) (165) 0.15 0.15 white "-- Reduces platform size.", myText (-400) (120) 0.15 0.15 white "-- Increases ball speed.", myText (-400) (75) 0.15 0.15 white "-- Reduses ball speed.", drawPicture  (imageKarina  images) 550 (-200) 0.7, drawPicture  (imageArkanoid  images) 300 (200) 0.9, drawPicture  (imageCat2  images) 30 (-100) 0.5])
+                         case (gameState game) of 0 -> return (pictures [ ball, walls, platform, platforms, gameName, authors, drawScore(gameScore game), drawGameOverText(game), helloStr(playerName game), records 180.0 t1, records 150.0 t2, records 120.0 t3, records 90.0 t4, board 180.0, board 150.0, board 120.0, board 90.0, translate 500 200 $ color white $ rectangleSolid 250 250, drawPicture  (imageCat1  images) (505) (200) 1.0, drawPicture  (imageCat3  images) (-535) (-235) 0.5, secretBonus (imageDoge images) game ])
+                                                  1 -> return (pictures [ myText (-500) 250 0.5 0.5 white "Bonuses:", myText (-500) (-100) 0.5 0.5 white "Control Keys:", myText (-500) (-140) 0.15 0.15 white "-- Press 's' to reset the game.", myText (-500) (-170) 0.15 0.15 white "-- Press 'p' to pause the game.", myText (-500) (-200) 0.15 0.15 white "-- Press 'g' to resume the game.", myText (-500) (-230) 0.15 0.15 white "-- Press 'r' to save your score in the records table.", myText (-500) (-260) 0.15 0.15 white "-- Press 'c' to clear the records table.", myText (-500) (-290) 0.15 0.15 white "-- Press 'o' to save the game in your profile.", myText (-500) (-320) 0.15 0.15 white "-- Press ' l ' to load the game from your profile.", myText (250) (-350) 0.15 0.15 white "-- To continue the game press ' y '.", bonusHelp (-440) (215) red, bonusHelp (-440) (170) green, bonusHelp (-440) (125) blue, bonusHelp (-440) (80) yellow, myText (-400) (210) 0.15 0.15 white "-- Increases platform size", myText (-400) (165) 0.15 0.15 white "-- Reduces platform size.", myText (-400) (120) 0.15 0.15 white "-- Increases ball speed.", myText (-400) (75) 0.15 0.15 white "-- Reduses ball speed.", drawPicture  (imageKarina  images) 550 (-200) 0.7, drawPicture  (imageArkanoid  images) 300 (200) 0.9, drawPicture  (imageCat2  images) 30 (-100) 0.5])
   where
     -- Hello string!
     helloStr :: String -> Picture
@@ -108,6 +120,11 @@ render images game = do  t1 <- readFile ("p1.txt")
     -- Bonus texture.
     bonusHelp :: Float -> Float -> Color -> Picture
     bonusHelp x y col = translate (x) (y) $ color col $ circleSolid 15
+
+    -- Secret Bonus.
+    secretBonus :: Picture -> PongGame -> Picture
+    secretBonus image game = if (gameState game == 99) then translate (500) (-250) (scale 0.25 0.25 image)
+                                                       else translate (1000) (1000) $ color white $ circleSolid 5
 
     -- Records Table.
     records :: Float -> String -> Picture
@@ -143,6 +160,18 @@ render images game = do  t1 <- readFile ("p1.txt")
 
     wallColor = light (light blue)
     walls = pictures [ wallOne wallColor (-300) 0, wallOne red 300 0, wallTwo yellow 0 300, wallTwo white 0 (-300) ]
+    
+    
+-- *******************************************************************************************************************************
+    platforms = pictures (getPlatforms getCoords1)
+
+    getCoords1 :: [(Float,Float)]
+    getCoords1 = (platformsLoc game)  
+    getPlatforms :: [(Float,Float)]-> [Picture] 
+    getPlatforms [] = []
+    getPlatforms ((x,y):xs) = (translate x y $ color  randColor $ rectangleSolid 40 10): getPlatforms xs
+ -- ***********************************************************************************************************************************
+
 
     --  The platform.
     platform = uncurry translate (platformLoc game) $ color col $ rectangleSolid 90 10
@@ -229,8 +258,23 @@ wallBounce game = game { ballVel = (vx', vy'), gameScore = score' }
 platformCollision :: Position -> Position -> Radius -> Bool 
 platformCollision (x, y) (bx, by) radius = collisionX && collisionY
   where
-    collisionX  = (x + 45 >= bx + radius) && (x - 45 <= bx - radius) -- Расчёты с условием ширины платформы
+    collisionX  = (x + 45 >= bx - radius) && (x - 45 <= bx + radius) -- Расчёты с условием ширины платформы
     collisionY  = by - radius < (-250) -- Расчёты с условием высоты платформы
+
+platformsCollisionX :: [Position] -> Position -> Radius -> Bool 
+platformsCollisionX [] _ _ = False
+platformsCollisionX ((x,y):xs) (bx, by)  radius = (collisionsX && collisionsY) || (platformsCollisionX xs (bx,by) radius)
+  where
+    collisionsX  = (bx <= (x + 20)) && (bx >= (x + 17)) || (bx <= (x - 17)) && (bx >= (x - 20)) -- Расчёты с условием ширины платформы
+    collisionsY  = (by + radius >= (y-5)) && (by- radius <= (y+5)) -- Расчёты с условием высоты платформы
+
+platformsCollisionY :: [Position] -> Position -> Radius -> Bool 
+platformsCollisionY [] _ _ = False
+platformsCollisionY ((x,y):xs) (bx, by)  radius = (collisionsX && collisionsY) || (platformsCollisionY xs (bx,by) radius)
+  where
+    collisionsX  = (bx - radius  <= (x + 20)) && (bx + radius >= (x - 20)) -- Расчёты с условием ширины платформы
+    collisionsY  = (by >= (y-5)) && (by <= (y-3)) || (by >= (y+3)) && (by <= (y+5)) -- Расчёты с условием высоты платформы
+
 
 paddleBounce :: PongGame -> PongGame
 paddleBounce game = game { ballVel = (vx', vy') }
@@ -241,14 +285,21 @@ paddleBounce game = game { ballVel = (vx', vy') }
     -- The old velocities.
     (vx, vy) = ballVel game
 
-    vy' = if platformCollision (platformLoc game) (ballLoc game) radius
+    vy' = if (platformCollision (platformLoc game) (ballLoc game) radius) || (platformsCollisionY (platformsLoc game) (ballLoc game) radius)
           then
              -- Update the velocity.
              -vy
            else
              -- Do nothing. Return the old velocity.
              vy
-    vx' = vx
+    vx' = if (platformsCollisionX (platformsLoc game) (ballLoc game) radius)
+          then
+             -- Update the velocity.
+             -vx
+           else
+             -- Do nothing. Return the old velocity.
+             vx
+
 
 checkGameOver :: PongGame -> PongGame
 checkGameOver game = if snd (ballLoc game) - 8 < snd (platformLoc game) - 5 then game {ballVel = (0, 0), gameOverText = "GAME OVER!"} else game
@@ -291,6 +342,40 @@ handleKeys (EventKey (Char 'c') Down _ _) game = do writeFile ("p1.txt") " "
                                                     writeFile ("p4.txt") " "
                                                     return game
 
+-- For an 'o' keypress, to save the game in data base.
+handleKeys (EventKey (Char 'o') Down _ _) game = do writeFile ("saves/save"++ proFile game ++ ".txt") (show(ballLoc game) ++ "%" ++ show(ballVelBuf game) ++ "%" ++ show(ballVel game) ++ "%" ++ show(platformLoc game) ++ "%" ++ show(platformsLoc game) ++ "%" ++ show(gameScore game) ++ "%" ++ gameOverText game ++ "%" ++ playerName game ++ "%" ++ proFile game ++ "%" ++ show(gameState game) ++ "%")
+                                                    return game
+
+-- For an 'l' keypress, to load the game.
+handleKeys (EventKey (Char 'l') Down _ _) game = do text <- readFile ("saves/save"++ proFile game ++ ".txt")
+                                                    let x1 = read ((parseStr [] text)!!0) :: (Float, Float)
+                                                        x2 = read ((parseStr [] text)!!1) :: (Float, Float)
+                                                        x3 = read ((parseStr [] text)!!2) :: (Float, Float)
+                                                        x4 = read ((parseStr [] text)!!3) :: (Float, Float)
+                                                        x5 = read ((parseStr [] text)!!4) :: [(Float, Float)]
+                                                        x6 = read ((parseStr [] text)!!5) :: Score
+                                                        x7 = (parseStr [] text)!!6
+                                                        x8 = (parseStr [] text)!!7
+                                                        x9 = (parseStr [] text)!!8
+                                                        x10 = read ((parseStr [] text)!!9) :: Integer
+                                                    return game { ballLoc = x1, ballVelBuf = x2, ballVel = x3, platformLoc = x4, platformsLoc = x5, gameScore = x6, gameOverText = x7, playerName = x8, proFile = x9, gameState = x10}
+
+{-
+-- | Data describing the state of the pong game. 
+data PongGame = Game
+  { ballLoc :: (Float, Float)  -- ^ Pong ball (x, y) location.
+  , ballVelBuf :: (Float, Float) -- ^ helping buffer.
+  , ballVel :: (Float, Float)  -- ^ Pong ball (x, y) velocity. 
+  , platformLoc :: (Float, Float) -- ^ Platform (x, y) location.
+  , platformsLoc :: [(Float,Float)]
+  , gameScore :: Score
+  , gameOverText :: String
+  , playerName :: String
+  , proFile :: String
+  , gameState :: Integer
+  } deriving Show
+-}
+
 -- For an 'a' keypress
 handleKeys (EventKey (Char 'a') _ _ _) game = return game { platformLoc = (x', y) }
   where 
@@ -298,8 +383,8 @@ handleKeys (EventKey (Char 'a') _ _ _) game = return game { platformLoc = (x', y
     (x, y) = platformLoc game
 
     -- New locations.
-    x' = if x - 30 - 45 >= -fromIntegral height / 2
-         then x - 30
+    x' = if x - 40 - 45 >= -fromIntegral height / 2
+         then x - 40
          else x
 
 -- For an 'd' keypress
@@ -309,8 +394,8 @@ handleKeys (EventKey (Char 'd') _ _ _) game = return game { platformLoc = (x', y
     (x, y) = platformLoc game
 
     -- New locations.
-    x' = if x + 30 + 45 <= fromIntegral height / 2
-         then x + 30
+    x' = if x + 40 + 45 <= fromIntegral height / 2
+         then x + 40
          else x
 
 -- For an 'Esc' keypress, to exit the game.
@@ -318,6 +403,10 @@ handleKeys (EventKey (SpecialKey KeyEsc) _ _ _) game = exitSuccess
 
 -- Do nothing for all other events.
 handleKeys _ game = return game
+
+parseStr :: String -> String -> [String]
+parseStr _ [] = []
+parseStr buf (x:xs) = if (x /= '%') then parseStr (buf ++ [x]) xs else buf:(parseStr [] xs)
 
 -- Random Color
 randColor :: Color
