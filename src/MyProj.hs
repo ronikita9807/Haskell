@@ -39,6 +39,7 @@ data PongGame = Game
   , playerName :: String
   , proFile :: String
   , gameState :: Integer
+  , pastBallLoc :: (Float,Float)
   } deriving Show
 
 -- | The starting state for the game of Pong.
@@ -54,6 +55,7 @@ initialState prof name = Game
   , playerName = name
   , proFile = prof
   , gameState = 0
+  , pastBallLoc = (0, (-100))
   }
 
 -- | Изображения объектов.
@@ -196,7 +198,7 @@ moveBall :: Float    -- ^ The number of seconds since last update
          -> PongGame -- ^ The initial game state
          -> PongGame -- ^ A new game state with an updated ball position
 
-moveBall seconds game = game { ballLoc = (x', y') }
+moveBall seconds game = game { pastBallLoc = ballLoc game , ballLoc = (x', y') }
   where
     -- Old locations and velocities.
     (x, y) = ballLoc game
@@ -227,11 +229,11 @@ wallCollisionX (x, y) radius = leftCollision || rightCollision
     rightCollision  = x - radius <= -fromIntegral height / 2
 
 wallBounce :: PongGame -> PongGame
-wallBounce game = game { ballVel = (vx', vy'), gameScore = score' }
+wallBounce game = game { ballVel = (vx', vy') }
   where
     -- Radius. Use the same thing as in `render`.
     radius = 8
-    score = gameScore game
+    
 
     -- The old velocities.
     (vx, vy) = ballVel game
@@ -249,57 +251,74 @@ wallBounce game = game { ballVel = (vx', vy'), gameScore = score' }
           else
              vx
 
-    score' = if wallCollisionY (ballLoc game) radius || wallCollisionX (ballLoc game) radius
-            then 
-               score + 1
-            else
-               score
-
+    
 platformCollision :: Position -> Position -> Radius -> Bool 
 platformCollision (x, y) (bx, by) radius = collisionX && collisionY
   where
     collisionX  = (x + 45 >= bx - radius) && (x - 45 <= bx + radius) -- Расчёты с условием ширины платформы
     collisionY  = by - radius < (-250) -- Расчёты с условием высоты платформы
 
-platformsCollisionX :: [Position] -> Position -> Radius -> Bool 
-platformsCollisionX [] _ _ = False
-platformsCollisionX ((x,y):xs) (bx, by)  radius = (collisionsX && collisionsY) || (platformsCollisionX xs (bx,by) radius)
+platformsCollision :: [Position] -> Position -> Radius -> Bool 
+platformsCollision [] _ _ = False
+platformsCollision ((x,y):xs) (bx, by)  radius = (collisionsX && collisionsY) || (platformsCollision xs (bx,by) radius)
   where
-    collisionsX  = (bx <= (x + 20)) && (bx >= (x + 17)) || (bx <= (x - 17)) && (bx >= (x - 20)) -- Расчёты с условием ширины платформы
-    collisionsY  = (by + radius >= (y-5)) && (by- radius <= (y+5)) -- Расчёты с условием высоты платформы
+    collisionsX  = abs(bx - x) <= (20 + radius)-- Расчёты с условием ширины платформы
+    collisionsY  = abs(by - y) <= (5 + radius)-- Расчёты с условием высоты платформы
 
-platformsCollisionY :: [Position] -> Position -> Radius -> Bool 
-platformsCollisionY [] _ _ = False
-platformsCollisionY ((x,y):xs) (bx, by)  radius = (collisionsX && collisionsY) || (platformsCollisionY xs (bx,by) radius)
-  where
-    collisionsX  = (bx - radius  <= (x + 20)) && (bx + radius >= (x - 20)) -- Расчёты с условием ширины платформы
-    collisionsY  = (by >= (y-5)) && (by <= (y-3)) || (by >= (y+3)) && (by <= (y+5)) -- Расчёты с условием высоты платформы
+isPlatformsCollisionY :: [Position] -> Position -> Radius -> Bool 
+isPlatformsCollisionY [] _ _ = False
+isPlatformsCollisionY ((x,y):xs) (px,py) radius = collisionsY || isPlatformsCollisionY xs (px,py) radius
+  where 
+    collisionsY = abs(py - y) > (5 + radius)
 
+
+deletePlat :: [Position] -> Position -> Radius -> [Position]
+deletePlat [] _ _ =[]
+deletePlat ((x,y):xs) (bx,by) radius = if (abs(bx - x) <= (20 + radius) &&  abs(by - y) <= (5 + radius)) 
+                                         then
+                                           (deletePlat xs (bx,by) radius) 
+                                         else
+                                           ((x,y) : (deletePlat xs (bx,by) radius))
 
 paddleBounce :: PongGame -> PongGame
-paddleBounce game = game { ballVel = (vx', vy') }
+paddleBounce game = game { ballVel = (vx', vy'), platformsLoc = newPlatLoc, gameScore = score', gameOverText = text}
   where
     -- Radius. Use the same thing as in `render`.
     radius = 8
-
+    score = gameScore game
     -- The old velocities.
+    
     (vx, vy) = ballVel game
+    
+    text = if (platformsLoc game) == [] 
+             then 
+               "  YOU WIN!"
+             else 
+               " "
+    
+    newPlatLoc = (deletePlat (platformsLoc game) (ballLoc game) radius )
+    
+    
+    score' = if (platformsCollision (platformsLoc game) (ballLoc game) radius)
+            then 
+               score + 1
+            else
+               score
 
-    vy' = if (platformCollision (platformLoc game) (ballLoc game) radius) || (platformsCollisionY (platformsLoc game) (ballLoc game) radius)
+    
+    vy' = if (platformCollision (platformLoc game) (ballLoc game) radius) || ((isPlatformsCollisionY (platformsLoc game) ( pastBallLoc game) radius  ) && (platformsCollision (platformsLoc game) (ballLoc game) radius))
           then
              -- Update the velocity.
              -vy
            else
              -- Do nothing. Return the old velocity.
-             vy
-    vx' = if (platformsCollisionX (platformsLoc game) (ballLoc game) radius)
-          then
-             -- Update the velocity.
-             -vx
-           else
-             -- Do nothing. Return the old velocity.
-             vx
-
+             if (platformsLoc game) == []
+               then 0
+               else vy
+        
+    vx'= if (platformsLoc game) == []
+           then 0
+           else vx
 
 checkGameOver :: PongGame -> PongGame
 checkGameOver game = if snd (ballLoc game) - 8 < snd (platformLoc game) - 5 then game {ballVel = (0, 0), gameOverText = "GAME OVER!"} else game
@@ -313,7 +332,7 @@ update seconds = return . checkGameOver . paddleBounce . wallBounce . moveBall s
 handleKeys :: Event -> PongGame -> IO PongGame
 
 -- For an 's' keypress, to reset the game.
-handleKeys (EventKey (Char 's') _ _ _) game = return game { ballLoc = (0, -100), ballVel = (250, -250), gameScore = 0, gameOverText = "" }
+handleKeys (EventKey (Char 's') _ _ _) game = return game { ballLoc = (0, -100), ballVel = randVel, platformsLoc = [(x,y)| x<-[-210, -100..220], y<-[90,150..290]], gameScore = 0, gameOverText = " " }
 
 -- For an 'p' keypress, to pause the game.
 handleKeys (EventKey (Char 'p') _ _ _) game =
@@ -335,6 +354,7 @@ handleKeys (EventKey (Char 'y') _ _ _) game = return game { gameState = 0 }
 handleKeys (EventKey (Char 'r') Down _ _) game = do writeFile ("p"++ proFile game ++ ".txt") (" | " ++ (playerName game) ++ "  " ++ show(gameScore game))
                                                     return game
 
+
 -- For an 'c' keypress, to clear the records board.
 handleKeys (EventKey (Char 'c') Down _ _) game = do writeFile ("p1.txt") " "
                                                     writeFile ("p2.txt") " "
@@ -343,7 +363,7 @@ handleKeys (EventKey (Char 'c') Down _ _) game = do writeFile ("p1.txt") " "
                                                     return game
 
 -- For an 'o' keypress, to save the game in data base.
-handleKeys (EventKey (Char 'o') Down _ _) game = do writeFile ("saves/save"++ proFile game ++ ".txt") (show(ballLoc game) ++ "%" ++ show(ballVelBuf game) ++ "%" ++ show(ballVel game) ++ "%" ++ show(platformLoc game) ++ "%" ++ show(platformsLoc game) ++ "%" ++ show(gameScore game) ++ "%" ++ gameOverText game ++ "%" ++ playerName game ++ "%" ++ proFile game ++ "%" ++ show(gameState game) ++ "%")
+handleKeys (EventKey (Char 'o') Down _ _) game = do writeFile ("saves/save"++ proFile game ++ ".txt") (show(ballLoc game) ++ "%" ++ show(ballVelBuf game) ++ "%" ++ show(ballVel game) ++ "%" ++ show(platformLoc game) ++ "%" ++ show(platformsLoc game) ++ "%" ++ show(gameScore game) ++ "%" ++ gameOverText game ++ "%" ++ playerName game ++ "%" ++ proFile game ++ "%" ++ show(gameState game) ++ "%" ++ show(pastBallLoc game) ++ "%")
                                                     return game
 
 -- For an 'l' keypress, to load the game.
@@ -358,23 +378,10 @@ handleKeys (EventKey (Char 'l') Down _ _) game = do text <- readFile ("saves/sav
                                                         x8 = (parseStr [] text)!!7
                                                         x9 = (parseStr [] text)!!8
                                                         x10 = read ((parseStr [] text)!!9) :: Integer
-                                                    return game { ballLoc = x1, ballVelBuf = x2, ballVel = x3, platformLoc = x4, platformsLoc = x5, gameScore = x6, gameOverText = x7, playerName = x8, proFile = x9, gameState = x10}
+                                                        x11 = read ((parseStr [] text)!!10) :: (Float, Float)
+                                                    return game { ballLoc = x1, ballVelBuf = x2, ballVel = x3, platformLoc = x4, platformsLoc = x5, gameScore = x6, gameOverText = x7, playerName = x8, proFile = x9, gameState = x10, pastBallLoc = x11}
 
-{-
--- | Data describing the state of the pong game. 
-data PongGame = Game
-  { ballLoc :: (Float, Float)  -- ^ Pong ball (x, y) location.
-  , ballVelBuf :: (Float, Float) -- ^ helping buffer.
-  , ballVel :: (Float, Float)  -- ^ Pong ball (x, y) velocity. 
-  , platformLoc :: (Float, Float) -- ^ Platform (x, y) location.
-  , platformsLoc :: [(Float,Float)]
-  , gameScore :: Score
-  , gameOverText :: String
-  , playerName :: String
-  , proFile :: String
-  , gameState :: Integer
-  } deriving Show
--}
+
 
 -- For an 'a' keypress
 handleKeys (EventKey (Char 'a') _ _ _) game = return game { platformLoc = (x', y) }
@@ -414,6 +421,14 @@ randColor | (mod ((unsafePerformIO (getStdRandom (randomR (0, 100)))) :: Int) 4)
           | (mod ((unsafePerformIO (getStdRandom (randomR (0, 100)))) :: Int) 4) == 1 = green
           | (mod ((unsafePerformIO (getStdRandom (randomR (0, 100)))) :: Int) 4) == 2 = blue
           | otherwise = yellow
+
+randVel :: (Float,Float)
+randVel = (x',y')
+  where
+    y'=(unsafePerformIO (getStdRandom (randomR (-250, -150))))
+    x'=sqrt(2*250^2 - y'*y')
+    
+    
 
 runMyProj :: String -> String -> Images -> IO ()
 runMyProj name prof images = playIO window background fps (initialState prof name) (render images) handleKeys update --print $ show(randColor)
