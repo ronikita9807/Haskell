@@ -263,8 +263,8 @@ platformsCollision :: [Position] -> Position -> Radius -> Bool
 platformsCollision [] _ _ = False
 platformsCollision ((x,y):xs) (bx, by)  radius = (collisionsX && collisionsY) || (platformsCollision xs (bx,by) radius)
   where
-    collisionsX  = abs(bx - x) <= (20 + radius)-- Расчёты с условием ширины платформы
-    collisionsY  = abs(by - y) <= (5 + radius)-- Расчёты с условием высоты платформы
+    collisionsX  = abs(bx - x) <= (20 + radius) -- Расчёты с условием ширины платформы
+    collisionsY  = abs(by - y) <= (5 + radius) -- Расчёты с условием высоты платформы
 
 isPlatformsCollisionY :: [Position] -> Position -> Radius -> Bool 
 isPlatformsCollisionY [] _ _ = False
