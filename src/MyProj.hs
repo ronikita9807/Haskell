@@ -292,7 +292,7 @@ paddleBounce game = game { ballVel = (vx', vy'), platformsLoc = newPlatLoc, game
     
     text = if (platformsLoc game) == [] 
              then 
-               "  YOU WIN!"
+               " YOU WIN! "
              else 
                " "
     
@@ -332,23 +332,23 @@ update seconds = return . checkGameOver . paddleBounce . wallBounce . moveBall s
 handleKeys :: Event -> PongGame -> IO PongGame
 
 -- For an 's' keypress, to reset the game.
-handleKeys (EventKey (Char 's') _ _ _) game = return game { ballLoc = (0, -100), ballVel = randVel, platformsLoc = [(x,y)| x<-[-210, -100..220], y<-[90,150..290]], gameScore = 0, gameOverText = " " }
+handleKeys (EventKey (Char 's') Down _ _) game = return game { ballLoc = (0, -100), ballVel = randVel, platformsLoc = [(x,y)| x<-[-210, -100..220], y<-[90,150..290]], gameScore = 0, gameOverText = " " }
 
 -- For an 'p' keypress, to pause the game.
-handleKeys (EventKey (Char 'p') _ _ _) game =
+handleKeys (EventKey (Char 'p') Down _ _) game =
   let v = ballVel game
   in if v /= (0,0)
      then return game { ballVelBuf = v, ballVel = (0, 0) }
      else return game
 
 -- For an 'g' keypress, to unpause the game.
-handleKeys (EventKey (Char 'g') _ _ _) game = return game { ballVel = ballVelBuf game }
+handleKeys (EventKey (Char 'g') Down _ _) game = return game { ballVel = ballVelBuf game }
 
 -- For an 't' keypress, to see game rules.
-handleKeys (EventKey (Char 't') _ _ _) game = return game { gameState = 1 }
+handleKeys (EventKey (Char 't') Down _ _) game = return game { gameState = 1 }
 
 -- For an 'y' keypress, to see game rules.
-handleKeys (EventKey (Char 'y') _ _ _) game = return game { gameState = 0 }
+handleKeys (EventKey (Char 'y') Down _ _) game = return game { gameState = 0 }
 
 -- For an 'r' keypress, to save your score in the records table.
 handleKeys (EventKey (Char 'r') Down _ _) game = do writeFile ("p"++ proFile game ++ ".txt") (" | " ++ (playerName game) ++ "  " ++ show(gameScore game))
