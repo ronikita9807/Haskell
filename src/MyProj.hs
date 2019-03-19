@@ -38,7 +38,7 @@ data PongGame = Game
   , gameOverText :: String
   , playerName :: String
   , proFile :: String
-  , gameState :: Integer
+  , gameState :: Integer -- data GameState = GameStatePlay | GameStateBonus ...
   , pastBallLoc :: (Float,Float)
   } deriving Show
 
@@ -102,6 +102,7 @@ drawBall :: Picture -> PongGame -> Picture
 drawBall image game = uncurry translate (ballLoc game) (scale 0.2 0.2 image)
 
 -- | Convert a game state into a picture.
+-- TODO: remove the scary line!
 render :: Images -> PongGame  -- ^ The game state to render.
        -> IO Picture   -- ^ A picture of this game state.
 render images game = do  t1 <- readFile ("p1.txt")
@@ -416,6 +417,7 @@ parseStr _ [] = []
 parseStr buf (x:xs) = if (x /= '%') then parseStr (buf ++ [x]) xs else buf:(parseStr [] xs)
 
 -- Random Color
+-- we don't use unsafePerformIO anymore
 randColor :: Color
 randColor | (mod ((unsafePerformIO (getStdRandom (randomR (0, 100)))) :: Int) 4) == 0 = red
           | (mod ((unsafePerformIO (getStdRandom (randomR (0, 100)))) :: Int) 4) == 1 = green
