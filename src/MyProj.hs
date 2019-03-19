@@ -12,7 +12,6 @@ import Graphics.Gloss.Juicy
 
 import Graphics.Gloss.Interface.IO.Game
 import System.Exit
---import Text.Read hiding (Char)
 import Text.Read (readMaybe)
 
 width, height :: Int
@@ -27,6 +26,8 @@ background = black
 
 type Score = Int
 
+data GameState = GameStatePlay | GameStateBonus | GameStateMenu deriving Show
+
 -- | Data describing the state of the pong game. 
 data PongGame = Game
   { ballLoc :: (Float, Float)  -- ^ Pong ball (x, y) location.
@@ -38,7 +39,7 @@ data PongGame = Game
   , gameOverText :: String
   , playerName :: String
   , proFile :: String
-  , gameState :: Integer -- data GameState = GameStatePlay | GameStateBonus ...
+  , gameState :: GameState -- data GameState = GameStatePlay | GameStateBonus ...
   , pastBallLoc :: (Float,Float)
   } deriving Show
 
@@ -54,7 +55,7 @@ initialState prof name = Game
   , gameOverText = " "
   , playerName = name
   , proFile = prof
-  , gameState = 0
+  , gameState = GameStatePlay
   , pastBallLoc = (0, (-100))
   }
 
@@ -105,12 +106,55 @@ drawBall image game = uncurry translate (ballLoc game) (scale 0.2 0.2 image)
 -- TODO: remove the scary line!
 render :: Images -> PongGame  -- ^ The game state to render.
        -> IO Picture   -- ^ A picture of this game state.
-render images game = do  t1 <- readFile ("p1.txt")
-                         t2 <- readFile ("p2.txt")
-                         t3 <- readFile ("p3.txt")
-                         t4 <- readFile ("p4.txt")
-                         case (gameState game) of 0 -> return (pictures [ ball, walls, platform, platforms, gameName, authors, drawScore(gameScore game), drawGameOverText(game), helloStr(playerName game), records 180.0 t1, records 150.0 t2, records 120.0 t3, records 90.0 t4, board 180.0, board 150.0, board 120.0, board 90.0, translate 500 200 $ color white $ rectangleSolid 250 250, drawPicture  (imageCat1  images) (505) (200) 1.0, drawPicture  (imageCat3  images) (-535) (-235) 0.5, secretBonus (imageDoge images) game ])
-                                                  1 -> return (pictures [ myText (-500) 250 0.5 0.5 white "Bonuses:", myText (-500) (-100) 0.5 0.5 white "Control Keys:", myText (-500) (-140) 0.15 0.15 white "-- Press 's' to reset the game.", myText (-500) (-170) 0.15 0.15 white "-- Press 'p' to pause the game.", myText (-500) (-200) 0.15 0.15 white "-- Press 'g' to resume the game.", myText (-500) (-230) 0.15 0.15 white "-- Press 'r' to save your score in the records table.", myText (-500) (-260) 0.15 0.15 white "-- Press 'c' to clear the records table.", myText (-500) (-290) 0.15 0.15 white "-- Press 'o' to save the game in your profile.", myText (-500) (-320) 0.15 0.15 white "-- Press ' l ' to load the game from your profile.", myText (250) (-350) 0.15 0.15 white "-- To continue the game press ' y '.", bonusHelp (-440) (215) red, bonusHelp (-440) (170) green, bonusHelp (-440) (125) blue, bonusHelp (-440) (80) yellow, myText (-400) (210) 0.15 0.15 white "-- Increases platform size", myText (-400) (165) 0.15 0.15 white "-- Reduces platform size.", myText (-400) (120) 0.15 0.15 white "-- Increases ball speed.", myText (-400) (75) 0.15 0.15 white "-- Reduses ball speed.", drawPicture  (imageKarina  images) 550 (-200) 0.7, drawPicture  (imageArkanoid  images) 300 (200) 0.9, drawPicture  (imageCat2  images) 30 (-100) 0.5])
+render images game = do  
+  t1 <- readFile ("p1.txt")
+  t2 <- readFile ("p2.txt")
+  t3 <- readFile ("p3.txt")
+  t4 <- readFile ("p4.txt")
+  case (gameState game) of 
+    GameStatePlay -> return (pictures [ ball
+                                      , walls
+                                      , platform
+                                      , platforms
+                                      , gameName
+                                      , authors
+                                      , drawScore(gameScore game)
+                                      , drawGameOverText(game)
+                                      , helloStr(playerName game)
+                                      , records 180.0 t1
+                                      , records 150.0 t2
+                                      , records 120.0 t3
+                                      , records 90.0 t4
+                                      , board 180.0
+                                      , board 150.0
+                                      , board 120.0
+                                      , board 90.0
+                                      , translate 500 200 $ color white $ rectangleSolid 250 250
+                                      , drawPicture  (imageCat1  images) (505) (200) 1.0
+                                      , drawPicture  (imageCat3  images) (-535) (-235) 0.5
+                                      , secretBonus (imageDoge images) game
+                                      , myText (350) (350) 0.15 0.15 white "Press ' t ' to view the menu!" ])
+    GameStateMenu -> return (pictures [ myText (-500) 250 0.5 0.5 white "Bonuses:"
+                                      , myText (-500) (-100) 0.5 0.5 white "Control Keys:"
+                                      , myText (-500) (-140) 0.15 0.15 white "-- Press 's' to reset the game."
+                                      , myText (-500) (-170) 0.15 0.15 white "-- Press 'p' to pause the game."
+                                      , myText (-500) (-200) 0.15 0.15 white "-- Press 'g' to resume the game."
+                                      , myText (-500) (-230) 0.15 0.15 white "-- Press 'r' to save your score in the records table."
+                                      , myText (-500) (-260) 0.15 0.15 white "-- Press 'c' to clear the records table."
+                                      , myText (-500) (-290) 0.15 0.15 white "-- Press 'o' to save the game in your profile."
+                                      , myText (-500) (-320) 0.15 0.15 white "-- Press ' l ' to load the game from your profile."
+                                      , myText (250) (-350) 0.15 0.15 white "-- To continue the game press ' y '."
+                                      , bonusHelp (-440) (215) red
+                                      , bonusHelp (-440) (170) green
+                                      , bonusHelp (-440) (125) blue
+                                      , bonusHelp (-440) (80) yellow
+                                      , myText (-400) (210) 0.15 0.15 white "-- Increases platform size"
+                                      , myText (-400) (165) 0.15 0.15 white "-- Reduces platform size."
+                                      , myText (-400) (120) 0.15 0.15 white "-- Increases ball speed."
+                                      , myText (-400) (75) 0.15 0.15 white "-- Reduses ball speed."
+                                      , drawPicture  (imageKarina  images) 550 (-200) 0.7
+                                      , drawPicture  (imageArkanoid  images) 300 (200) 0.9
+                                      , drawPicture  (imageCat2  images) 30 (-100) 0.5])
   where
     -- Hello string!
     helloStr :: String -> Picture
@@ -126,8 +170,9 @@ render images game = do  t1 <- readFile ("p1.txt")
 
     -- Secret Bonus.
     secretBonus :: Picture -> PongGame -> Picture
-    secretBonus image game = if (gameState game == 99) then translate (500) (-250) (scale 0.25 0.25 image)
-                                                       else translate (1000) (1000) $ color white $ circleSolid 5
+    secretBonus image game = case (gameState game) of
+                               GameStateBonus -> translate (500) (-250) (scale 0.25 0.25 image)
+                               GameStatePlay  -> translate (1000) (1000) $ color white $ circleSolid 5
 
     -- Records Table.
     records :: Float -> String -> Picture
@@ -346,10 +391,10 @@ handleKeys (EventKey (Char 'p') Down _ _) game =
 handleKeys (EventKey (Char 'g') Down _ _) game = return game { ballVel = ballVelBuf game }
 
 -- For an 't' keypress, to see game rules.
-handleKeys (EventKey (Char 't') Down _ _) game = return game { gameState = 1 }
+handleKeys (EventKey (Char 't') Down _ _) game = return game { gameState = GameStateMenu }
 
 -- For an 'y' keypress, to see game rules.
-handleKeys (EventKey (Char 'y') Down _ _) game = return game { gameState = 0 }
+handleKeys (EventKey (Char 'y') Down _ _) game = return game { gameState = GameStatePlay }
 
 -- For an 'r' keypress, to save your score in the records table.
 handleKeys (EventKey (Char 'r') Down _ _) game = do writeFile ("p"++ proFile game ++ ".txt") (" | " ++ (playerName game) ++ "  " ++ show(gameScore game))
@@ -378,9 +423,8 @@ handleKeys (EventKey (Char 'l') Down _ _) game = do text <- readFile ("saves/sav
                                                         x7 = (parseStr [] text)!!6
                                                         x8 = (parseStr [] text)!!7
                                                         x9 = (parseStr [] text)!!8
-                                                        x10 = read ((parseStr [] text)!!9) :: Integer
                                                         x11 = read ((parseStr [] text)!!10) :: (Float, Float)
-                                                    return game { ballLoc = x1, ballVelBuf = x2, ballVel = x3, platformLoc = x4, platformsLoc = x5, gameScore = x6, gameOverText = x7, playerName = x8, proFile = x9, gameState = x10, pastBallLoc = x11}
+                                                    return game { ballLoc = x1, ballVelBuf = x2, ballVel = x3, platformLoc = x4, platformsLoc = x5, gameScore = x6, gameOverText = x7, playerName = x8, proFile = x9, gameState = GameStatePlay, pastBallLoc = x11}
 
 
 
