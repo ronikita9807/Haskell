@@ -91,7 +91,9 @@ data Images = Images
   , imageCat2 :: Picture
   , imageCat3 :: Picture
   , imageBonusDoge :: Picture
+  , imageBonusDogeHelp :: Picture
   , imageDoge :: Picture
+  , imageRocket :: Picture
   }
 
 -- | Загрузить изображения из файлов.
@@ -105,6 +107,7 @@ loadImages = do
   Just cat3   <- loadJuicyPNG "images/cat3.png"
   Just bonusDoge <- loadJuicyPNG "images/doge.png"
   Just doge <- loadJuicyPNG "images/dogebread.png"
+  Just rocket <- loadJuicyPNG "images/rocket.png"
   return Images
     { imageKarina   = scale 1.0 1.0 karina
     , imageArkanoid    = scale 1.0 1.0 arkanoid
@@ -113,7 +116,9 @@ loadImages = do
     , imageCat2 = scale 1.0 1.0 cat2
     , imageCat3 = scale 1.0 1.0 cat3
     , imageBonusDoge = scale 0.1 0.1 bonusDoge
+    , imageBonusDogeHelp = scale 0.13 0.13 bonusDoge
     , imageDoge = scale 1.0 1.0 doge
+    , imageRocket = scale 0.1 0.1 rocket
     }
 
 
@@ -166,17 +171,18 @@ render images game = do  t1 <- readFile ("p1.txt")
                                                  , myText (-500) (-260) 0.15 0.15 white "-- Press 'c' to clear the records table."
                                                  , myText (-500) (-290) 0.15 0.15 white "-- Press 'o' to save the game in your profile."
                                                  , myText (-500) (-320) 0.15 0.15 white "-- Press ' l ' to load the game from your profile."
+                                                 , myText (-500) (-350) 0.15 0.15 white "-- Press ' k ' to change the platform`s color."
                                                  , myText (250) (-350) 0.15 0.15 white "-- To continue the game press ' y '."
-                                                 , bonusHelp (-440) (215) red
-                                                 , bonusHelp (-440) (170) green
-                                                 , bonusHelp (-440) (125) blue
-                                                 , bonusHelp (-440) (80) yellow
-                                                 , myText (-400) (210) 0.15 0.15 white "-- Increases platform size"
-                                                 , myText (-400) (165) 0.15 0.15 white "-- Reduces platform size."
-                                                 , myText (-400) (120) 0.15 0.15 white "-- Increases ball speed."
-                                                 , myText (-400) (75) 0.15 0.15 white "-- Reduses ball speed."
+                                                 , translate (-440) (215) $ color white $ circleSolid 15
+                                                 , translate (-440) (170) (imageBonusDogeHelp images)
+                                                 , translate (-440) (125) $ color green $ rectangleSolid 50 10
+                                                 , translate (-440) (80) $ color red $ rectangleSolid 75 10
+                                                 , myText (-400) (210) 0.15 0.15 white "-- Reach it to get +3 points!"
+                                                 , myText (-400) (165) 0.15 0.15 white "-- Reach it to view a SECRET bonus!"
+                                                 , myText (-400) (120) 0.15 0.15 white "-- After increasing your platform, you can score 10 points, after which it will decrease again!"
+                                                 , myText (-375) (75) 0.15 0.15 white "-- Every 20 points we increase your platform size!"
                                                  , drawPicture  (imageKarina  images) 550 (-200) 0.7
-                                                 , drawPicture  (imageArkanoid  images) 300 (200) 0.9
+                                                 , drawPicture  (imageArkanoid  images) 350 (260) 0.8
                                                  , drawPicture  (imageCat2  images) 30 (-100) 0.5])
   where
     -- Hello string!
@@ -187,27 +193,26 @@ render images game = do  t1 <- readFile ("p1.txt")
     myText :: Float -> Float -> Float -> Float -> Color -> String -> Picture
     myText x y sx sy col txt = translate (x) (y) $ scale sx sy $ color col $ text txt
 
-    -- Bonus texture.
-    bonusHelp :: Float -> Float -> Color -> Picture
-    bonusHelp x y col = translate (x) (y) $ color col $ circleSolid 15
-
     -- Secret Bonus.
     secretBonus :: Picture -> PongGame -> Picture
     secretBonus image game = if (secret game) then translate (500) (-250) (scale 0.25 0.25 image)
                                               else translate (1000) (1000) $ color white $ circleSolid 5
     
-    secretPos = uncurry translate (0,190)  $ color ballColor $ imageBonus
+    secretPos = uncurry translate (0,190)  $ color ballColor $ imageBonus1
     ballColor = if (level game ) /= 7 || (secret game)
                   then black
                   else dark red
-    imageBonus = if (level game ) /= 7 || (secret game)
+    imageBonus1 = if (level game ) /= 7 || (secret game)
                   then circleSolid 8
                   else (imageBonusDoge images)
     
-    bonPos = uncurry translate (bonusPos game)  $ color ballColors $ circleSolid 10
+    bonPos = uncurry translate (bonusPos game)  $ color ballColors $ imageBonus2
     ballColors = if (level game ) /= 4 
                   then black
                   else white
+    imageBonus2 = if (level game ) /= 4 || (secret game)
+                  then circleSolid 8
+                  else (imageRocket images)
     
     -- Records Table.
     records :: Float -> String -> Picture
@@ -695,4 +700,4 @@ randVel game = (x',y')
     
 
 runMyProj :: StdGen -> String -> String -> Images -> IO ()
-runMyProj gen name prof images = playIO window background fps (initialState gen prof name) (render images) handleKeys update --print $ show(randColor)
+runMyProj gen name prof images = playIO window background fps (initialState gen prof name) (render images) handleKeys update
