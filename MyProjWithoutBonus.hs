@@ -34,10 +34,7 @@ data PongGame = Game
   , ballVelBuf :: (Float, Float) -- ^ helping buffer.
   , ballVel :: (Float, Float)  -- ^ Pong ball (x, y) velocity. 
   , platformLoc :: (Float, Float) -- ^ Platform (x, y) location.
-  , platformColor :: Color
   , platformsLoc :: [(Float,Float)]
-  , platformSizeX :: Float
-  , platformSizeY :: Float
   , gameScore :: Score
   , gameOverText :: String
   , playerName :: String
@@ -45,8 +42,6 @@ data PongGame = Game
   , gameState :: Integer -- data GameState = GameStatePlay | GameStateBonus ...
   , pastBallLoc :: (Float,Float)
   , secret :: Bool
-  , bonusPos :: (Float,Float)
-  , bonusFlag :: Bool
   } deriving Show
 
 -- | The starting state for the game of Pong.
@@ -56,10 +51,7 @@ initialState prof name = Game
   , ballLoc = (0, (-100))
   , ballVel = (0, 0)
   , platformLoc = (0, (-250))
-  , platformColor = green
   , platformsLoc = [(x,y)| x<-[-210, -100..220], y<-[90,150..290]]
-  , platformSizeX = 90
-  , platformSizeY = 10
   , ballVelBuf = (0, 0)
   , gameScore = 0
   , gameOverText = " "
@@ -68,8 +60,7 @@ initialState prof name = Game
   , gameState = 0
   , pastBallLoc = (0, (-100))
   , secret = False
-  , bonusPos = (0,250)
-  , bonusFlag = False
+
   }
 
 -- | Изображения объектов.
@@ -123,7 +114,7 @@ render images game = do  t1 <- readFile ("p1.txt")
                          t2 <- readFile ("p2.txt")
                          t3 <- readFile ("p3.txt")
                          t4 <- readFile ("p4.txt")
-                         case (gameState game) of 0 -> return (pictures [ secretPos, bonPos, ball, walls, platform, platforms, gameName, authors, drawScore(gameScore game), drawGameOverText(game), helloStr(playerName game), records 180.0 t1, records 150.0 t2, records 120.0 t3, records 90.0 t4, board 180.0, board 150.0, board 120.0, board 90.0, translate 500 200 $ color white $ rectangleSolid 250 250, drawPicture  (imageCat1  images) (505) (200) 1.0, drawPicture  (imageCat3  images) (-535) (-235) 0.5, secretBonus (imageDoge images) game ])
+                         case (gameState game) of 0 -> return (pictures [ secretPos, ball, walls, platform, platforms, gameName, authors, drawScore(gameScore game), drawGameOverText(game), helloStr(playerName game), records 180.0 t1, records 150.0 t2, records 120.0 t3, records 90.0 t4, board 180.0, board 150.0, board 120.0, board 90.0, translate 500 200 $ color white $ rectangleSolid 250 250, drawPicture  (imageCat1  images) (505) (200) 1.0, drawPicture  (imageCat3  images) (-535) (-235) 0.5, secretBonus (imageDoge images) game ])
                                                   1 -> return (pictures [ myText (-500) 250 0.5 0.5 white "Bonuses:", myText (-500) (-100) 0.5 0.5 white "Control Keys:", myText (-500) (-140) 0.15 0.15 white "-- Press 's' to reset the game.", myText (-500) (-170) 0.15 0.15 white "-- Press 'p' to pause the game.", myText (-500) (-200) 0.15 0.15 white "-- Press 'g' to resume the game.", myText (-500) (-230) 0.15 0.15 white "-- Press 'r' to save your score in the records table.", myText (-500) (-260) 0.15 0.15 white "-- Press 'c' to clear the records table.", myText (-500) (-290) 0.15 0.15 white "-- Press 'o' to save the game in your profile.", myText (-500) (-320) 0.15 0.15 white "-- Press ' l ' to load the game from your profile.", myText (250) (-350) 0.15 0.15 white "-- To continue the game press ' y '.", bonusHelp (-440) (215) red, bonusHelp (-440) (170) green, bonusHelp (-440) (125) blue, bonusHelp (-440) (80) yellow, myText (-400) (210) 0.15 0.15 white "-- Increases platform size", myText (-400) (165) 0.15 0.15 white "-- Reduces platform size.", myText (-400) (120) 0.15 0.15 white "-- Increases ball speed.", myText (-400) (75) 0.15 0.15 white "-- Reduses ball speed.", drawPicture  (imageKarina  images) 550 (-200) 0.7, drawPicture  (imageArkanoid  images) 300 (200) 0.9, drawPicture  (imageCat2  images) 30 (-100) 0.5])
   where
     -- Hello string!
@@ -147,11 +138,6 @@ render images game = do  t1 <- readFile ("p1.txt")
     ballColor = if (level game ) /= 7 || (secret game)
                   then black
                   else dark red
-    
-    bonPos = uncurry translate (bonusPos game)  $ color ballColors $ circleSolid 10
-    ballColors = if (level game ) /= 4 
-                  then black
-                  else white
     
     -- Records Table.
     records :: Float -> String -> Picture
@@ -201,7 +187,8 @@ render images game = do  t1 <- readFile ("p1.txt")
 
 
     --  The platform.
-    platform = uncurry translate (platformLoc game) $ color (platformColor game) $ rectangleSolid (platformSizeX game) (platformSizeY game)
+    platform = uncurry translate (platformLoc game) $ color col $ rectangleSolid 90 10
+    col = green
 
 -- | Draw Score
 drawScore :: Score -> Picture
@@ -222,25 +209,12 @@ moveBall :: Float    -- ^ The number of seconds since last update
          -> PongGame -- ^ The initial game state
          -> PongGame -- ^ A new game state with an updated ball position
 
-moveBall seconds game = game { pastBallLoc = ballLoc game , ballLoc = (x', y'), bonusPos=(dx',dy'), bonusFlag = flag }
+moveBall seconds game = game { pastBallLoc = ballLoc game , ballLoc = (x', y') }
   where
     -- Old locations and velocities.
     (x, y) = ballLoc game
     (vx, vy) = ballVel game
-    (dx,dy)=(bonusPos game)
-    eps=150*seconds
-    flag = if dy <= 50 + eps && dy >= 50 - eps
-             then True
-             else 
-               if dy<=250 + eps && dy >= 250 - eps
-                 then False 
-                 else (bonusFlag game)
-    dy' = if (bonusFlag game)
-            then dy+eps
-            else dy-eps
-    dx'=if (bonusFlag game)
-          then -sqrt(10000 - (dy'-150)*(dy'-150) )
-          else sqrt(10000 - (dy'-150)*(dy'-150) )
+
     -- New locations.
     x' = x + vx * seconds
     y' = y + vy * seconds
@@ -287,23 +261,16 @@ wallBounce game = game { ballVel = (vx', vy') }
              -vx
           else
              vx
-
-bonusCollision  :: Position -> Position -> Radius -> Bool 
-bonusCollision (x, y) (bx, by) radius = collisionX && collisionY
-  where
-    collisionX  = abs(bx - x) <= (radius)
-    collisionY  = abs(by - y) <= (radius)
-
 secretBonusCollision  :: Position -> Position -> Radius -> Bool 
 secretBonusCollision (x, y) (bx, by) radius = collisionX && collisionY
   where
     collisionX  = abs(bx - x) <= (2*radius)
     collisionY  = abs(by - y) <= (2*radius)
 
-platformCollision :: Position -> Position -> Float -> Radius -> Bool 
-platformCollision (x, y) (bx, by)  a  radius = collisionX && collisionY
+platformCollision :: Position -> Position -> Radius -> Bool 
+platformCollision (x, y) (bx, by) radius = collisionX && collisionY
   where
-    collisionX  = (x + a/2 >= bx - radius) && (x - a/2 <= bx + radius) -- Расчёты с условием ширины платформы
+    collisionX  = (x + 45 >= bx - radius) && (x - 45 <= bx + radius) -- Расчёты с условием ширины платформы
     collisionY  = by - radius < (-250) -- Расчёты с условием высоты платформы
 
 platformsCollision :: [Position] -> Position -> Radius -> Bool 
@@ -330,7 +297,7 @@ deletePlat ((x,y):xs) (bx,by) radius = if (abs(bx - x) <= (20 + radius) &&  abs(
 
 paddleBounce :: PongGame -> PongGame
 paddleBounce game = game { ballVel = (vx', vy'), platformsLoc = newPlatLoc, 
-                                            gameScore = score', gameOverText = text, secret= secret', platformSizeX = size, platformColor = color}
+                                            gameScore = score', gameOverText = text, secret= secret'}
   where
     -- Radius. Use the same thing as in `render`.
     radius = 8
@@ -338,20 +305,6 @@ paddleBounce game = game { ballVel = (vx', vy'), platformsLoc = newPlatLoc,
     -- The old velocities.
     
     (vx, vy) = ballVel game
-    
-    color = if platformSizeX game == 110
-              then red
-              else green
-    
-    size = if ((mod (gameScore game) 20 ) == 0 && (gameScore game) /= 0) && (platformSizeX game) < 110
-             then 
-               (platformSizeX game) + 20
-             else 
-               if (mod (gameScore game) 20 <= 10) || gameScore game < 20 || (platformSizeX game) == 90
-                 then 
-                   (platformSizeX game)
-                 else 
-                   (platformSizeX game) - 20
     
     text = if ((platformsLoc game) == []) 
              then 
@@ -370,14 +323,10 @@ paddleBounce game = game { ballVel = (vx', vy'), platformsLoc = newPlatLoc,
             then 
                score + 1
             else
-              if (bonusCollision (bonusPos game) (ballLoc game) radius) && (level game) == 4 
-               then 
-                 score +3
-               else 
-                 score
+               score
 
     
-    vy' = if (platformCollision (platformLoc game) (ballLoc game) (platformSizeX game) radius) || ((isPlatformsCollisionY (platformsLoc game) ( pastBallLoc game) radius  ) && (platformsCollision (platformsLoc game) (ballLoc game) radius))
+    vy' = if (platformCollision (platformLoc game) (ballLoc game) radius) || ((isPlatformsCollisionY (platformsLoc game) ( pastBallLoc game) radius  ) && (platformsCollision (platformsLoc game) (ballLoc game) radius))
           then
              -- Update the velocity.
              -vy
@@ -392,7 +341,7 @@ paddleBounce game = game { ballVel = (vx', vy'), platformsLoc = newPlatLoc,
            else vx
 
 checkGameOver :: PongGame -> PongGame
-checkGameOver game = if snd (ballLoc game) - 8 < snd (platformLoc game) - 5 then game {ballVel = (0, 0),  gameOverText = "GAME OVER!", platfomSizeX = 90, platformColor = green} else game
+checkGameOver game = if snd (ballLoc game) - 8 < snd (platformLoc game) - 5 then game {ballVel = (0, 0),  gameOverText = "GAME OVER!"} else game
 
 
 buildPlatforms ::  PongGame -> [Position]
@@ -489,7 +438,7 @@ handleKeys (EventKey (Char 'a') _ _ _) game = return game { platformLoc = (x', y
     (x, y) = platformLoc game
 
     -- New locations.
-    x' = if x - 40 - (platformSizeX game)/2 >= -fromIntegral height / 2
+    x' = if x - 40 - 45 >= -fromIntegral height / 2
          then x - 40
          else x
 
@@ -500,7 +449,7 @@ handleKeys (EventKey (Char 'd') _ _ _) game = return game { platformLoc = (x', y
     (x, y) = platformLoc game
 
     -- New locations.
-    x' = if x + 40 + (platformSizeX game)/2 <= fromIntegral height / 2
+    x' = if x + 40 + 45 <= fromIntegral height / 2
          then x + 40
          else x
 handleKeys (EventKey (Char '1') _ _ _) game = return game { ballLoc = (0, (-100))
@@ -598,11 +547,7 @@ handleKeys (EventKey (Char 'n') Down _ _) game = return game { level = level'
                                                           , pastBallLoc = (0, (-100))
                                                           }
   where 
-    level' =if ( mod ((level game) + 1) 8) > 0
-              then 
-                mod ((level game) + 1) 8
-              else 
-                1
+    level' = mod ((level game) + 1) 8
     newLoc = buildPlatforms game{level = level'}
 
 -- For an 'Esc' keypress, to exit the game.

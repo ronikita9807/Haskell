@@ -34,7 +34,6 @@ data PongGame = Game
   , ballVelBuf :: (Float, Float) -- ^ helping buffer.
   , ballVel :: (Float, Float)  -- ^ Pong ball (x, y) velocity. 
   , platformLoc :: (Float, Float) -- ^ Platform (x, y) location.
-  , platformColor :: Color
   , platformsLoc :: [(Float,Float)]
   , platformSizeX :: Float
   , platformSizeY :: Float
@@ -56,7 +55,6 @@ initialState prof name = Game
   , ballLoc = (0, (-100))
   , ballVel = (0, 0)
   , platformLoc = (0, (-250))
-  , platformColor = green
   , platformsLoc = [(x,y)| x<-[-210, -100..220], y<-[90,150..290]]
   , platformSizeX = 90
   , platformSizeY = 10
@@ -201,7 +199,8 @@ render images game = do  t1 <- readFile ("p1.txt")
 
 
     --  The platform.
-    platform = uncurry translate (platformLoc game) $ color (platformColor game) $ rectangleSolid (platformSizeX game) (platformSizeY game)
+    platform = uncurry translate (platformLoc game) $ color col $ rectangleSolid (platformSizeX game) (platformSizeY game)
+    col = green
 
 -- | Draw Score
 drawScore :: Score -> Picture
@@ -228,19 +227,19 @@ moveBall seconds game = game { pastBallLoc = ballLoc game , ballLoc = (x', y'), 
     (x, y) = ballLoc game
     (vx, vy) = ballVel game
     (dx,dy)=(bonusPos game)
-    eps=150*seconds
-    flag = if dy <= 50 + eps && dy >= 50 - eps
+    eps=1
+    flag = if dy == 50
              then True
              else 
-               if dy<=250 + eps && dy >= 250 - eps
-                 then False 
-                 else (bonusFlag game)
+               if dy<=250
+                 then (bonusFlag game)
+                 else False
     dy' = if (bonusFlag game)
             then dy+eps
             else dy-eps
     dx'=if (bonusFlag game)
-          then -sqrt(10000 - (dy'-150)*(dy'-150) )
-          else sqrt(10000 - (dy'-150)*(dy'-150) )
+          then -sqrt(10000 - (dy'-150)^2 )
+          else sqrt(10000 - (dy'-150)^2 )
     -- New locations.
     x' = x + vx * seconds
     y' = y + vy * seconds
@@ -330,7 +329,7 @@ deletePlat ((x,y):xs) (bx,by) radius = if (abs(bx - x) <= (20 + radius) &&  abs(
 
 paddleBounce :: PongGame -> PongGame
 paddleBounce game = game { ballVel = (vx', vy'), platformsLoc = newPlatLoc, 
-                                            gameScore = score', gameOverText = text, secret= secret', platformSizeX = size, platformColor = color}
+                                            gameScore = score', gameOverText = text, secret= secret', platformSizeX = size}
   where
     -- Radius. Use the same thing as in `render`.
     radius = 8
@@ -338,10 +337,6 @@ paddleBounce game = game { ballVel = (vx', vy'), platformsLoc = newPlatLoc,
     -- The old velocities.
     
     (vx, vy) = ballVel game
-    
-    color = if platformSizeX game == 110
-              then red
-              else green
     
     size = if ((mod (gameScore game) 20 ) == 0 && (gameScore game) /= 0) && (platformSizeX game) < 110
              then 
@@ -392,7 +387,7 @@ paddleBounce game = game { ballVel = (vx', vy'), platformsLoc = newPlatLoc,
            else vx
 
 checkGameOver :: PongGame -> PongGame
-checkGameOver game = if snd (ballLoc game) - 8 < snd (platformLoc game) - 5 then game {ballVel = (0, 0),  gameOverText = "GAME OVER!", platfomSizeX = 90, platformColor = green} else game
+checkGameOver game = if snd (ballLoc game) - 8 < snd (platformLoc game) - 5 then game {ballVel = (0, 0),  gameOverText = "GAME OVER!"} else game
 
 
 buildPlatforms ::  PongGame -> [Position]
