@@ -35,7 +35,7 @@ range2 = (-250, -150)
 
 -- | Data describing the state of the pong game. 
 data PongGame = Game
-  { level :: Int
+  { level :: Integer
   , ballLoc :: (Float, Float)  -- ^ Pong ball (x, y) location.
   , ballVelBuf :: (Float, Float) -- ^ helping buffer.
   , ballVel :: (Float, Float)  -- ^ Pong ball (x, y) velocity. 
@@ -526,25 +526,43 @@ handleKeys (EventKey (Char 'c') Down _ _) game = do writeFile ("p1.txt") " "
                                                     return game
 
 -- For an 'o' keypress, to save the game in data base.
-handleKeys (EventKey (Char 'o') Down _ _) game = do writeFile ("saves/save"++ proFile game ++ ".txt") (show(ballLoc game) ++ "%" ++ show(ballVelBuf game) ++ "%" ++ show(ballVel game) ++ "%" ++ show(platformLoc game) ++ "%" ++ show(platformsLoc game) ++ "%" ++ show(gameScore game) ++ "%" ++ gameOverText game ++ "%" ++ playerName game ++ "%" ++ proFile game ++ "%" ++ show(gameState game) ++ "%" ++ show(pastBallLoc game) ++ "%")
+handleKeys (EventKey (Char 'o') Down _ _) game = do writeFile ("saves/save"++ proFile game ++ ".txt") (show(level game) ++ "%" ++ show(ballLoc game)++ "%" ++ show(ballVelBuf game) ++ "%" ++ show(ballVel game) ++ "%" ++ show(platformLoc game) ++ "%" ++ show(platformsLoc game) ++ "%" ++ show(platformSizeX game) ++ "%" ++ show(platformSizeY game) ++ "%" ++ show(gameScore game) ++ "%" ++ (gameOverText game) ++ "%" ++ (playerName game) ++ "%" ++ (proFile game) ++ "%" ++ show(pastBallLoc game) ++ "%" ++ show(secret game) ++ "%" ++ show(bonusPos game) ++ "%" ++ show(bonusFlag game) ++ "%")
                                                     return game
 
 -- For an 'l' keypress, to load the game.
 handleKeys (EventKey (Char 'l') Down _ _) game = do text <- readFile ("saves/save"++ proFile game ++ ".txt")
-                                                    let x1 = read ((parseStr [] text)!!0) :: (Float, Float)
+                                                    let x1 = read ((parseStr [] text)!!0) :: Integer
                                                         x2 = read ((parseStr [] text)!!1) :: (Float, Float)
                                                         x3 = read ((parseStr [] text)!!2) :: (Float, Float)
                                                         x4 = read ((parseStr [] text)!!3) :: (Float, Float)
-                                                        x5 = read ((parseStr [] text)!!4) :: [(Float, Float)]
-                                                        x6 = read ((parseStr [] text)!!5) :: Score
-                                                        x7 = (parseStr [] text)!!6
-                                                        x8 = (parseStr [] text)!!7
-                                                        x9 = (parseStr [] text)!!8
-                                                        x10 = read ((parseStr [] text)!!9) :: Integer
-                                                        x11 = read ((parseStr [] text)!!10) :: (Float, Float)
-                                                    return game { ballLoc = x1, ballVelBuf = x2, ballVel = x3, platformLoc = x4, platformsLoc = x5, gameScore = x6, gameOverText = x7, playerName = x8, proFile = x9, gameState = x10, pastBallLoc = x11}
-
-
+                                                        x5 = read ((parseStr [] text)!!4) :: (Float, Float)
+                                                        x7 = read ((parseStr [] text)!!5) :: [(Float,Float)]
+                                                        x8 = read ((parseStr [] text)!!6) :: Float
+                                                        x9 = read ((parseStr [] text)!!7) :: Float
+                                                        x10 = read ((parseStr [] text)!!8) :: Score
+                                                        x11 = (parseStr [] text)!!9
+                                                        x12 = (parseStr [] text)!!10
+                                                        x13 = (parseStr [] text)!!11
+                                                        x15 = read ((parseStr [] text)!!12) :: (Float,Float)
+                                                        x16 = read ((parseStr [] text)!!13) :: Bool
+                                                        x17 = read ((parseStr [] text)!!14) :: (Float,Float)
+                                                        x18 = read ((parseStr [] text)!!15) :: Bool
+                                                    return game { level = x1
+                                                                , ballLoc = x2
+                                                                , ballVelBuf = x3
+                                                                , ballVel = x4 
+                                                                , platformLoc = x5
+                                                                , platformsLoc = x7
+                                                                , platformSizeX = x8
+                                                                , platformSizeY = x9
+                                                                , gameScore = x10
+                                                                , gameOverText = x11
+                                                                , playerName = x12
+                                                                , proFile = x13
+                                                                , pastBallLoc = x15
+                                                                , secret = x16
+                                                                , bonusPos = x17
+                                                                , bonusFlag = x18 }
 
 -- For an 'a' keypress
 handleKeys (EventKey (Char 'a') _ _ _) game = return game { platformLoc = (x', y) }
