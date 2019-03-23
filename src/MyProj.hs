@@ -158,6 +158,7 @@ render images game = do  t1 <- readFile ("p1.txt")
                                                  , board 150.0
                                                  , board 120.0
                                                  , board 90.0
+                                                 , myText (370) (350) 0.15 0.15 white "Press ' t ' to view menu!"
                                                  , translate 500 200 $ color white $ rectangleSolid 250 250
                                                  , drawPicture  (imageCat1  images) (505) (200) 1.0
                                                  , drawPicture  (imageCat3  images) (-535) (-235) 0.5
