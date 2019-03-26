@@ -174,7 +174,7 @@ render images game = do  t1 <- readFile ("p1.txt")
                                                  , myText (-500) (-320) 0.15 0.15 white "-- Press ' l ' to load the game from your profile."
                                                  , myText (-500) (-350) 0.15 0.15 white "-- Press ' k ' to change the platform`s color."
                                                  , myText (250) (-350) 0.15 0.15 white "-- To continue the game press ' y '."
-                                                 , translate (-440) (215) $ (imageRocket images)
+                                                 , translate (-440) (215) $ (imageRocket images) 
                                                  , translate (-440) (170) (imageBonusDogeHelp images)
                                                  , translate (-440) (125) $ color green $ rectangleSolid 50 10
                                                  , translate (-440) (80) $ color red $ rectangleSolid 75 10
