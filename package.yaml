@@ -13,6 +13,8 @@ dependencies:
 - gloss
 - random
 - gloss-juicy
+- deepseq
+- strict-io
 
 library:
   source-dirs: src

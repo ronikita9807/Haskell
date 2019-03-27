@@ -3,3 +3,5 @@ packages:
 - '.'
 extra-deps:
 - gloss-juicy-0.2.3
+- deepseq-1.4.4.0
+- strict-io-0.2.2
