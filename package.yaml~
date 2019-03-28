@@ -13,7 +13,6 @@ dependencies:
 - gloss
 - random
 - gloss-juicy
-- time
 
 library:
   source-dirs: src

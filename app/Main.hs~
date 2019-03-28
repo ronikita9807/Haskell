@@ -13,4 +13,4 @@ main = do putStrLn "Hello, what's your name?"
           images <- loadImages
           gen <- newStdGen
           tim <- getCurrentTime
-          runMyProj tim gen name prof images
+          runMyProj gen name prof images

@@ -13,6 +13,7 @@ import Graphics.Gloss.Juicy
 import Graphics.Gloss.Interface.IO.Game
 import System.Exit
 --import Text.Read hiding (Char)
+import Data.Time
 import Text.Read (readMaybe)
 
 width, height :: Int
@@ -39,7 +40,10 @@ range2 = (-250, -150)
 -- | Data describing the state of the pong game. 
 data PongGame = Game
   { level :: Integer
+  , gameFlag :: Bool
   , koefForSpeed :: Float
+  , gameResetTime ::  UTCTime
+  , gameNowTime ::  UTCTime
   , ballLoc :: (Float, Float)  -- ^ Pong ball (x, y) location.
   , ballVelBuf :: (Float, Float) -- ^ helping buffer.
   , ballVel :: (Float, Float)  -- ^ Pong ball (x, y) velocity. 
@@ -62,9 +66,12 @@ data PongGame = Game
   } deriving Show
 
 -- | The starting state for the game of Pong.
-initialState :: StdGen -> String -> String -> PongGame
-initialState gen prof name = Game
+initialState :: UTCTime ->StdGen -> String -> String -> PongGame
+initialState tim gen prof name = Game
   { level = 1
+  , gameResetTime = tim
+  , gameNowTime = tim
+  , gameFlag = False
   , ballLoc = (0, (-100))
   , koefForSpeed = 1.0
   , ballVel = (0, 0)
@@ -73,7 +80,7 @@ initialState gen prof name = Game
   , platformsLoc = [(x,y)| x<-[-210, -100..220], y<-[90,150..290]]
   , platformSizeX = 90
   , platformSizeY = 10
-  , ballVelBuf = (0, 0)
+  , ballVelBuf = (0, 0) 
   , gameScore = 0
   , gameOverText = " "
   , playerName = name
@@ -396,6 +403,7 @@ deletePlat ((x,y):xs) (bx,by) radius = if (abs(bx - x) <= (20 + radius) &&  abs(
                                          else
                                            ((x,y) : (deletePlat xs (bx,by) radius))
 
+
 paddleBounce :: PongGame -> PongGame
 paddleBounce game = game { ballVel = (vx', vy'), platformsLoc = newPlatLoc, 
                                             gameScore = score', gameOverText = text, secret= secret', platformSizeX = size, platformColor = color}
@@ -427,7 +435,7 @@ paddleBounce game = game { ballVel = (vx', vy'), platformsLoc = newPlatLoc,
                  then " YOU WIN! "
                  else " Press 'n' "
              else 
-               " "
+               gameOverText game
 
     secret' = if (secretBonusCollision (0,190) (ballLoc game) radius) && (level game) == 7 || secret game 
                 then True
@@ -495,25 +503,24 @@ update seconds = return . checkGameOver . paddleBounce . wallBounce . moveBall s
 handleKeys :: Event -> PongGame -> IO PongGame
 
 -- For an 's' keypress, to reset the game.
-handleKeys (EventKey (Char 's') Down _ _) game = return game { ballLoc = (0, -100), ballVel = (randVel game),gameScore = score,
-                                                            platformsLoc = (buildPlatforms game), gameOverText = " ", koefForSpeed = 1 }
-  where 
-    score = if ((gameOverText game) == "GAME OVER!")
-                then 0
-                else (gameScore game)
-
+handleKeys (EventKey (Char 's') Down _ _) game = do t <- getCurrentTime  
+                                                    return game { ballLoc = (0, -100), ballVel = (randVel game), gameScore = score,platformsLoc = (buildPlatforms game), gameOverText = " ", koefForSpeed = 1, gameResetTime = t, gameNowTime = t, gameFlag = True }
+                                                      where score = if ((gameOverText game) == "GAME OVER!" || (gameOverText game) == "TIME IS OVER" )
+                                                                    then 0
+                                                                    else (gameScore game)
+                                                       
 -- For an 'p' keypress, to pause the game.
 handleKeys (EventKey (Char 'p') Down _ _) game =
   let v = ballVel game
   in if v /= (0,0)
-     then return game { ballVelBuf = v, ballVel = (0, 0) }
+     then return game { ballVelBuf = v, ballVel = (0, 0), gameFlag = False }
      else return game
 
 -- For an 'g' keypress, to unpause the game.
-handleKeys (EventKey (Char 'g') Down _ _) game = return game { ballVel = ballVelBuf game }
+handleKeys (EventKey (Char 'g') Down _ _) game = return game { ballVel = ballVelBuf game, gameFlag = True }
 
 -- For an 't' keypress, to see game rules.
-handleKeys (EventKey (Char 't') Down _ _) game = return game { gameState = 1 }
+handleKeys (EventKey (Char 't') Down _ _) game = return game { gameState = 1 , gameFlag = False}
 
 -- For an 'k' keypress, to see game rules.
 handleKeys (EventKey (Char 'k') Down _ _) game = return (randColor game)
@@ -570,29 +577,83 @@ handleKeys (EventKey (Char 'l') Down _ _) game = do text <- readFile ("saves/sav
                                                                 , pastBallLoc = x15
                                                                 , secret = x16
                                                                 , bonusPos = x17
-                                                                , bonusFlag = x18 }
+                                                                , bonusFlag = x18
+                                                                , gameFlag = True }
 
 -- For an 'a' keypress
-handleKeys (EventKey (Char 'a') _ _ _) game = return game { platformLoc = (x', y) }
-  where 
-    -- Old locations and velocities.
-    (x, y) = platformLoc game
+handleKeys (EventKey (Char 'a') _ _ _) game =do t <- getCurrentTime  
+                                                return game { platformLoc = (x', y), ballVel = vel ,gameOverText = text, platformSizeX = size, platformColor = color, gameFlag = flag, gameNowTime = t} --{ballVel = (0, 0),  gameOverText = "GAME OVER!", platformSizeX = 90, platformColor = green}
+                                                  where 
+                                                    -- Old locations and velocities.
+                                                    text = if ((gameFlag game)  && 
+                                                              (diffUTCTime ( gameNowTime game) (gameResetTime game)  ) 
+                                                               >= realToFrac 30 )
+                                                             then "time is over"
+                                                             else gameOverText game
+                                                    vel = if ((gameFlag game)  && 
+                                                             (diffUTCTime ( gameNowTime game) (gameResetTime game)  ) 
+                                                              >= realToFrac 30 )
+                                                             then (0,0)
+                                                             else ballVel game
+                                                    size = if ((gameFlag game)  && 
+                                                              (diffUTCTime ( gameNowTime game) (gameResetTime game)  ) 
+                                                               >= realToFrac 30 )
+                                                             then 90
+                                                             else platformSizeX game
+                                                    color= if ((gameFlag game)  && 
+                                                              (diffUTCTime ( gameNowTime game) (gameResetTime game) ) 
+                                                               >= realToFrac 30 )
+                                                             then green
+                                                             else platformColor game
+                                                    flag= if ((gameFlag game)  && 
+                                                             (diffUTCTime ( gameNowTime game) (gameResetTime game)  ) 
+                                                              >= realToFrac 30 )
+                                                             then False
+                                                             else gameFlag game
+                                                    
+                                                    (x, y) = platformLoc game
 
-    -- New locations.
-    x' = if x - 40 - (platformSizeX game)/2 >= -fromIntegral height / 2
-         then x - 40
-         else x
+                                                    -- New locations.
+                                                    x' = if x - 40 - (platformSizeX game)/2 >= -fromIntegral height / 2
+                                                         then x - 40
+                                                         else x
 
 -- For an 'd' keypress
-handleKeys (EventKey (Char 'd') _ _ _) game = return game { platformLoc = (x', y) }
-  where 
-    -- Old locations and velocities.
-    (x, y) = platformLoc game
-
-    -- New locations.
-    x' = if x + 40 + (platformSizeX game)/2 <= fromIntegral height / 2
-         then x + 40
-         else x
+handleKeys (EventKey (Char 'd') _ _ _) game = do t <- getCurrentTime  
+                                                 return game { platformLoc = (x', y), ballVel = vel ,gameOverText = text, platformSizeX = size, platformColor = color, gameFlag = flag, gameNowTime = t} --{ballVel = (0, 0),  gameOverText = "GAME OVER!", platformSizeX = 90, platformColor = green}
+                                                    where 
+                                                    -- Old locations and velocities.
+                                                        text = if ((gameFlag game)  && 
+                                                                  (diffUTCTime ( gameNowTime game)(gameResetTime game)  ) 
+                                                                   >= realToFrac 30 )
+                                                                 then "time is over"
+                                                                 else gameOverText game
+                                                        vel = if ((gameFlag game)  && 
+                                                                 (diffUTCTime ( gameNowTime game)(gameResetTime game)  ) 
+                                                                  >= realToFrac 30 )
+                                                                 then (0,0)
+                                                                 else ballVel game
+                                                        size = if ((gameFlag game)  && 
+                                                                  (diffUTCTime ( gameNowTime game)(gameResetTime game)  ) 
+                                                                   >= realToFrac 30 )
+                                                                 then 90
+                                                                 else platformSizeX game
+                                                        color= if ((gameFlag game)  && 
+                                                                  (diffUTCTime ( gameNowTime game)(gameResetTime game)  ) 
+                                                                   >= realToFrac 30)
+                                                                 then green
+                                                                 else platformColor game
+                                                        flag= if ((gameFlag game)  && 
+                                                                 (diffUTCTime ( gameNowTime game)(gameResetTime game)  ) 
+                                                                  >= realToFrac 30)
+                                                                 then False
+                                                                 else gameFlag game
+                                                         
+                                                        (x, y) = platformLoc game
+                                                    -- New locations.
+                                                        x' = if x + 40 + (platformSizeX game)/2 <= fromIntegral height / 2
+                                                                 then x + 40
+                                                                 else x
 handleKeys (EventKey (Char '1') _ _ _) game = return game { ballLoc = (0, (-100))
                                                           , ballVel = (0, 0)
                                                           , platformLoc = (0, (-250))
@@ -725,5 +786,5 @@ randVel game = (x',y')
     
     
 
-runMyProj :: StdGen -> String -> String -> Images -> IO ()
-runMyProj gen name prof images = playIO window background fps (initialState gen prof name) (render images) handleKeys update
+runMyProj ::UTCTime-> StdGen -> String -> String -> Images -> IO ()
+runMyProj tim gen name prof images = playIO window background fps (initialState tim gen prof name) (render images) handleKeys update
