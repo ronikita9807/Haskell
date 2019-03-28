@@ -603,7 +603,14 @@ handleKeys (EventKey (Char 'l') Down _ _) game = do text <- readFile ("saves/sav
 
 -- For an 'a' keypress
 handleKeys (EventKey (Char 'a') _ _ _) game =do t <- getCurrentTime  
-                                                return game { platformLoc = (x', y), ballVel = vel ,gameOverText = text, platformSizeX = size, platformColor = color, gameFlag = flag, gameNowTime = t} --{ballVel = (0, 0),  gameOverText = "GAME OVER!", platformSizeX = 90, platformColor = green}
+                                                return game { platformLoc = (x', y)
+                                                            , ballVel = vel 
+                                                            , gameOverText = text
+                                                            , platformSizeX = size
+                                                            , platformColor = color
+                                                            , gameFlag = flag
+                                                            , gameNowTime = t
+                                                            }
                                                   where 
                                                     -- Old locations and velocities.
                                                     text = if ((gameFlag game)  && 
@@ -641,7 +648,14 @@ handleKeys (EventKey (Char 'a') _ _ _) game =do t <- getCurrentTime
 
 -- For an 'd' keypress
 handleKeys (EventKey (Char 'd') _ _ _) game = do t <- getCurrentTime  
-                                                 return game { platformLoc = (x', y), ballVel = vel ,gameOverText = text, platformSizeX = size, platformColor = color, gameFlag = flag, gameNowTime = t} --{ballVel = (0, 0),  gameOverText = "GAME OVER!", platformSizeX = 90, platformColor = green}
+                                                 return game { platformLoc = (x', y)
+                                                             , ballVel = vel 
+                                                             , gameOverText = text
+                                                             , platformSizeX = size
+                                                             , platformColor = color
+                                                             , gameFlag = flag
+                                                             , gameNowTime = t
+                                                             }
                                                     where 
                                                     -- Old locations and velocities.
                                                         text = if ((gameFlag game)  && 
