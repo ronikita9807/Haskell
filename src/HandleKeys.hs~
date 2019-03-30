@@ -40,13 +40,13 @@ handleKeys (EventKey (Char 's') Down _ _) game = do t <- getCurrentTime
                                                       where score = if ((gameOverText game) == "GAME OVER!" || (gameOverText game) == "TIME IS OVER" )
                                                                     then 0
                                                                     else (gameScore game)
-                                                            time = case (level game) of 1 -> 40
-                                                                                        2 -> 50
-                                                                                        3 -> 60
-                                                                                        4 -> 60
-                                                                                        5 -> 60
+                                                            time = case (level game) of 1 -> 15
+                                                                                        2 -> 40
+                                                                                        3 -> 40
+                                                                                        4 -> 45
+                                                                                        5 -> 50
                                                                                         6 -> 45
-                                                                                        _ -> 60
+                                                                                        _ -> 50
                                                        
 -- For an 'p' keypress, to pause the game.
 handleKeys (EventKey (Char 'p') Down _ _) game =
@@ -251,7 +251,7 @@ handleKeys (EventKey (Char '1') _ _ _) game = return game { ballLoc = (0, (-100)
                                                           , gameOverText = " "
                                                           , pastBallLoc = (0, (-100))
                                                           , level = 1
-                                                          , timeForCompleteLevel = 40
+                                                          , timeForCompleteLevel = 10
                                                           }
 
 handleKeys (EventKey (Char '2') _ _ _) game = return game { ballLoc = (0, (-100))
@@ -263,7 +263,7 @@ handleKeys (EventKey (Char '2') _ _ _) game = return game { ballLoc = (0, (-100)
                                                           , gameOverText = " "
                                                           , pastBallLoc = (0, (-100))
                                                           , level = 2
-                                                          , timeForCompleteLevel = 50
+                                                          , timeForCompleteLevel = 40
                                                           }
 
 handleKeys (EventKey (Char '3') _ _ _) game = return game { ballLoc = (0, (-100))
@@ -277,7 +277,7 @@ handleKeys (EventKey (Char '3') _ _ _) game = return game { ballLoc = (0, (-100)
                                                           , gameOverText = " "
                                                           , pastBallLoc = (0, (-100))
                                                           , level = 3
-                                                          , timeForCompleteLevel = 60
+                                                          , timeForCompleteLevel = 40
                                                           }
 
 handleKeys (EventKey (Char '4') _ _ _) game = return game { level = 4 
@@ -290,7 +290,7 @@ handleKeys (EventKey (Char '4') _ _ _) game = return game { level = 4
                                                           , gameScore = 0
                                                           , gameOverText = " "
                                                           , pastBallLoc = (0, (-100))
-                                                          , timeForCompleteLevel = 60
+                                                          , timeForCompleteLevel = 45
                                                           
                                                           }
 handleKeys (EventKey (Char '5') _ _ _) game = return game { level = 5 
@@ -302,7 +302,7 @@ handleKeys (EventKey (Char '5') _ _ _) game = return game { level = 5
                                                           , gameScore = 0
                                                           , gameOverText = " "
                                                           , pastBallLoc = (0, (-100))
-                                                          , timeForCompleteLevel = 60
+                                                          , timeForCompleteLevel = 50
                                                           
                                                           }
 handleKeys (EventKey (Char '6') _ _ _) game = return game { level = 6 
@@ -330,7 +330,7 @@ handleKeys (EventKey (Char '7') _ _ _) game = return game { level = 7
                                                           , gameScore = 0
                                                           , gameOverText = " "
                                                           , pastBallLoc = (0, (-100))
-                                                          , timeForCompleteLevel = 60
+                                                          , timeForCompleteLevel = 50
                                                           
                                                           }
                                                           
