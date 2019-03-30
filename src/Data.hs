@@ -12,6 +12,8 @@ import Graphics.Gloss.Juicy
 
 import Graphics.Gloss.Interface.IO.Game
 import System.Exit
+--import Text.Read hiding (Char)
+import Data.Time
 import Text.Read (readMaybe)
 
 import Control.DeepSeq
@@ -41,6 +43,11 @@ type Position = (Float, Float)
 -- | Data describing the state of the pong game. 
 data PongGame = Game
   { level :: Integer
+  , timeForCompleteLevel :: Float
+  , gameFlag :: Bool
+  , koefForSpeed :: Float
+  , gameResetTime ::  UTCTime
+  , gameNowTime ::  UTCTime
   , ballLoc :: (Float, Float)  -- ^ Pong ball (x, y) location.
   , ballVelBuf :: (Float, Float) -- ^ helping buffer.
   , ballVel :: (Float, Float)  -- ^ Pong ball (x, y) velocity. 
@@ -63,17 +70,22 @@ data PongGame = Game
   } deriving Show
 
 -- | The starting state for the game of Pong.
-initialState :: StdGen -> String -> String -> PongGame
-initialState gen prof name = Game
+initialState :: UTCTime ->StdGen -> String -> String -> PongGame
+initialState tim gen prof name = Game
   { level = 1
+  , gameResetTime = tim
+  , timeForCompleteLevel=30
+  , gameNowTime = tim
+  , gameFlag = False
   , ballLoc = (0, (-100))
+  , koefForSpeed = 1.0
   , ballVel = (0, 0)
   , platformLoc = (0, (-250))
   , platformColor = green
   , platformsLoc = [(x,y)| x<-[-210, -100..220], y<-[90,150..290]]
   , platformSizeX = 90
   , platformSizeY = 10
-  , ballVelBuf = (0, 0)
+  , ballVelBuf = (0, 0) 
   , gameScore = 0
   , gameOverText = " "
   , playerName = name

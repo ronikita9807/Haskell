@@ -16,6 +16,8 @@ import Graphics.Gloss.Juicy
 
 import Graphics.Gloss.Interface.IO.Game
 import System.Exit
+--import Text.Read hiding (Char)
+import Data.Time
 import Text.Read (readMaybe)
 
 import Control.DeepSeq
@@ -183,13 +185,14 @@ moveBall :: Float    -- ^ The number of seconds since last update
          -> PongGame -- ^ The initial game state
          -> PongGame -- ^ A new game state with an updated ball position
 
-moveBall seconds game = game { pastBallLoc = ballLoc game , ballLoc = (x', y'), bonusPos=(dx',dy'), bonusFlag = flag }
+moveBall seconds game = game { pastBallLoc = ballLoc game , ballLoc = (x', y'), bonusPos=(dx',dy'), bonusFlag = flag, koefForSpeed = newKoef }
   where
     -- Old locations and velocities.
     (x, y) = ballLoc game
     (vx, vy) = ballVel game
     (dx,dy)=(bonusPos game)
     eps=150*seconds
+    newKoef = (koefForSpeed game) + 0.0001
     flag = if dy <= 50 + eps && dy >= 50 - eps
              then True
              else 
@@ -203,8 +206,8 @@ moveBall seconds game = game { pastBallLoc = ballLoc game , ballLoc = (x', y'), 
           then -sqrt(10000 - (dy'-150)*(dy'-150) )
           else sqrt(10000 - (dy'-150)*(dy'-150) )
     -- New locations.
-    x' = x + vx * seconds
-    y' = y + vy * seconds
+    x' = x + vx * seconds * (koefForSpeed game)
+    y' = y + vy * seconds * (koefForSpeed game)
 
 -- | Number of frames to show per second.
 fps :: Int
@@ -286,9 +289,10 @@ deletePlat ((x,y):xs) (bx,by) radius = if (abs(bx - x) <= (20 + radius) &&  abs(
                                          else
                                            ((x,y) : (deletePlat xs (bx,by) radius))
 
+
 paddleBounce :: PongGame -> PongGame
 paddleBounce game = game { ballVel = (vx', vy'), platformsLoc = newPlatLoc, 
-                                            gameScore = score', gameOverText = text, secret= secret', platformSizeX = size, platformColor = color}
+                                            gameScore = score', gameOverText = text, secret= secret', platformSizeX = size, platformColor = color, gameFlag = flag}
   where
     -- Radius. Use the same thing as in `render`.
     radius = 8
@@ -317,7 +321,10 @@ paddleBounce game = game { ballVel = (vx', vy'), platformsLoc = newPlatLoc,
                  then " YOU WIN! "
                  else " Press 'n' "
              else 
-               " "
+               gameOverText game
+    flag = if ((platformsLoc game) == []) 
+             then False
+             else (gameFlag game)
     secret' = if (secretBonusCollision (0,190) (ballLoc game) radius) && (level game) == 7 || secret game 
                 then True
                 else False
@@ -356,5 +363,5 @@ checkGameOver game = if snd (ballLoc game) - 8 < snd (platformLoc game) - 5 then
 update :: Float -> PongGame -> IO PongGame
 update seconds = return . checkGameOver . paddleBounce . wallBounce . moveBall seconds
 
-runMyProj :: StdGen -> String -> String -> Images -> IO ()
-runMyProj gen name prof images = playIO window background fps (initialState gen prof name) (render images) handleKeys update
+runMyProj ::UTCTime-> StdGen -> String -> String -> Images -> IO ()
+runMyProj tim gen name prof images = playIO window background fps (initialState tim gen prof name) (render images) handleKeys update

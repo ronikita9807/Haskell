@@ -1,6 +1,7 @@
 module Main where
 
 import MyProj
+import ImgWork
 import System.Random
 import Data.Time
 

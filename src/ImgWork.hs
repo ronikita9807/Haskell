@@ -12,6 +12,8 @@ import Graphics.Gloss.Juicy
 
 import Graphics.Gloss.Interface.IO.Game
 import System.Exit
+--import Text.Read hiding (Char)
+import Data.Time
 import Text.Read (readMaybe)
 
 import Control.DeepSeq
@@ -55,4 +57,3 @@ loadImages = do
     , imageDoge = scale 1.0 1.0 doge
     , imageRocket = scale 0.1 0.1 rocket
     }
-

@@ -13,6 +13,7 @@ dependencies:
 - gloss
 - random
 - gloss-juicy
+- time
 - deepseq
 - strict-io
 
