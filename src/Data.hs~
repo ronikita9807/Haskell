@@ -74,7 +74,7 @@ initialState :: UTCTime ->StdGen -> String -> String -> PongGame
 initialState tim gen prof name = Game
   { level = 1
   , gameResetTime = tim
-  , timeForCompleteLevel=15
+  , timeForCompleteLevel=60
   , gameNowTime = tim
   , gameFlag = False
   , ballLoc = (0, (-100))
